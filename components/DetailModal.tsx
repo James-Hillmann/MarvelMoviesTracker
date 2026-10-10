@@ -4,11 +4,15 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Entry } from "@/lib/timeline";
 import { TitleInfo } from "@/lib/tmdb";
+import StarRating from "./StarRating";
 import Wordmark from "./Wordmark";
 
 interface Props {
   entry: Entry;
   watched: boolean;
+  /** this profile's 1–10 rating */
+  rating?: number;
+  onRate: (v: number | null) => void;
   onToggle: (entry: Entry) => void;
   onClose: () => void;
 }
@@ -21,7 +25,7 @@ function searchUrl(entry: Entry) {
   };
 }
 
-export default function DetailModal({ entry, watched, onToggle, onClose }: Props) {
+export default function DetailModal({ entry, watched, rating, onRate, onToggle, onClose }: Props) {
   const [info, setInfo] = useState<TitleInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -163,6 +167,12 @@ export default function DetailModal({ entry, watched, onToggle, onClose }: Props
               </div>
             )}
           </div>
+        </div>
+
+        <div className={`rate-row ${watched && !rating ? "nudge" : ""}`}>
+          <span className="rate-label">{rating ? "Your rating" : watched ? "How was it? Rate it" : "Rate it"}</span>
+          <StarRating value={rating} onChange={onRate} size={26} />
+          {rating ? <span className="rate-value">{rating / 2}★</span> : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-3 border-t border-white/10 px-5 py-4">

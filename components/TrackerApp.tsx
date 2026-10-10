@@ -5,11 +5,14 @@ import { celebrate, phaseVictory } from "@/lib/confetti";
 import { Profile, profileById } from "@/lib/profiles";
 import { COUNTED_MOVIES, Entry, MOVIES, moviesInOrder, PHASE_BOSSES, PHASE_COLORS, PHASE_LABELS, SHOWS } from "@/lib/timeline";
 import { useProgress } from "@/lib/useProgress";
+import { useRatings } from "@/lib/useRatings";
+import AchievementToast from "./AchievementToast";
 import Board from "./Board";
 import DetailModal from "./DetailModal";
 import ProfilePicker from "./ProfilePicker";
 import ProgressHeader from "./ProgressHeader";
 import SagaBackground from "./SagaBackground";
+import WarRoom, { WarRoomTab } from "./WarRoom";
 
 const PROFILE_STORAGE_KEY = "mcu-profile";
 
@@ -27,7 +30,9 @@ export default function TrackerApp() {
   };
 
   const profile = profileById(profileId);
-  const { watched, toggle } = useProgress(profile?.id ?? null);
+  const { watched, loaded, toggle } = useProgress(profile?.id ?? null);
+  const { ratings, loaded: ratingsLoaded, rate } = useRatings(profile?.id ?? null);
+  const [warRoom, setWarRoom] = useState<WarRoomTab | null>(null);
   const [orderMode, setOrderModeState] = useState<"release" | "chrono">("release");
   const [showShows, setShowShowsState] = useState(false);
   const [selected, setSelected] = useState<Entry | null>(null);
@@ -121,6 +126,7 @@ export default function TrackerApp() {
         showShows={showShows}
         onShowShowsChange={setShowShows}
         profile={profile}
+        onOpenWarRoom={() => setWarRoom("intel")}
         onSwitchProfile={() => {
           localStorage.removeItem(PROFILE_STORAGE_KEY);
           setProfileId("");
@@ -188,10 +194,35 @@ export default function TrackerApp() {
         <DetailModal
           entry={selected}
           watched={Boolean(watched[selected.id])}
+          rating={ratings[selected.id]}
+          onRate={(v) => rate(selected.id, v)}
           onToggle={handleToggle}
           onClose={() => setSelected(null)}
         />
       )}
+
+      {warRoom && !selected && (
+        <WarRoom
+          profile={profile}
+          watched={watched}
+          ratings={ratings}
+          movieOrder={movieOrder}
+          initialTab={warRoom}
+          onSelect={setSelected}
+          onClose={() => setWarRoom(null)}
+        />
+      )}
+
+      <AchievementToast
+        profileId={profile.id}
+        watched={watched}
+        ratings={ratings}
+        ready={loaded && ratingsLoaded}
+        onOpenBadges={() => {
+          setSelected(null);
+          setWarRoom("badges");
+        }}
+      />
     </div>
   );
 }
