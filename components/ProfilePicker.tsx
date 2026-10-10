@@ -7,25 +7,33 @@ export default function ProfilePicker({ onPick }: { onPick: (p: Profile) => void
   return (
     <div className="picker-overlay">
       <div className="text-center">
-        <div className="mb-2 text-[11px] uppercase tracking-[0.5em] text-white/40">Road to Doomsday</div>
-        <h1 className="f-bebas mb-10 text-3xl tracking-[0.2em] text-white/90 sm:text-4xl">
-          WHO&apos;S WATCHING?
-        </h1>
-        <div className="flex flex-wrap items-center justify-center gap-6">
-          {PROFILES.map((p) => (
+        <div className="caption mb-6 text-sm">Road to Doomsday presents…</div>
+        <div className="mb-14">
+          <h1 className="picker-bubble">Who&apos;s watching?</h1>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10">
+          {PROFILES.map((p, i) => (
             <button
               key={p.id}
               className="picker-card"
               style={{ "--aura": p.color } as React.CSSProperties}
               onClick={() => onPick(p)}
             >
-              <span className="picker-name">{p.label}</span>
+              <div className="cover-mast">
+                <span className="mast-title">Road to Doomsday</span>
+                <span className="issue-box">
+                  <small>NO.</small>
+                  <b>{i + 1}</b>
+                </span>
+              </div>
+              <div className="cover-art">
+                <span className="picker-name">{p.label}</span>
+              </div>
+              <div className="cover-foot">Pick this issue!</div>
             </button>
           ))}
         </div>
-        <p className="mt-10 text-[11px] uppercase tracking-[0.25em] text-white/30">
-          each crew gets its own trail
-        </p>
+        <p className="section-meta mt-12">each crew gets its own trail</p>
       </div>
     </div>
   );

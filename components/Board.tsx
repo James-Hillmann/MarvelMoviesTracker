@@ -2,9 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CRACKS_SVG } from "@/lib/bossArt";
+import { burstClipPath, burstPoints, sfxFor, tiltFor } from "@/lib/comic";
 import { Entry, PHASE_BOSSES, PHASE_COLORS, PHASE_LABELS } from "@/lib/timeline";
 import ArrowPath from "./ArrowPath";
 import Wordmark from "./Wordmark";
+
+const STAMP_BURST = burstPoints(11, 0.62, 7);
+const FINALE_BURST = burstClipPath(18, 0.72, 3);
+
+/** narration line above each phase caption */
+function kickerFor(phase: number) {
+  if (phase === 1) return "Our story begins…";
+  if (phase === 6) return "And so, the final chapter…";
+  return "Meanwhile…";
+}
 
 type LayoutRow =
   | { kind: "banner"; phase: number }
@@ -58,10 +69,13 @@ function PhaseBanner({ phase, row, defeated }: { phase: number; row: number; def
     >
       <div className="rule" />
       <div className="banner-core">
-        <span className="label">{PHASE_LABELS[phase]}</span>
+        <div className="caption-box">
+          <span className="kicker">{kickerFor(phase)}</span>
+          <span className="label">{PHASE_LABELS[phase]}</span>
+        </div>
         {defeated && boss && (
           <span className="boss-tag">
-            <span className="boss-skull">☠</span> {boss.name} defeated
+            <span className="boss-skull">☠</span> {boss.name} defeated!
           </span>
         )}
       </div>
@@ -134,7 +148,7 @@ export default function Board({
         key={e.id}
         ref={registerCell(e.id)}
         className={`cell group ${isWatched ? "watched" : ""} ${isUpNext ? "upnext" : ""} ${isConquered ? "conquered" : ""}`}
-        style={{ "--aura": e.wm.aura, ...gridStyle } as React.CSSProperties}
+        style={{ "--aura": e.wm.aura, "--tilt": `${tiltFor(e.id, 1.6).toFixed(2)}deg`, ...gridStyle } as React.CSSProperties}
         onClick={() => onSelect(e)}
         role="button"
         tabIndex={0}
@@ -146,17 +160,20 @@ export default function Board({
         }}
         aria-label={`${e.sub ? e.sub + " " : ""}${e.title} (${e.year})`}
       >
-        {isUpNext && <span className="upnext-badge">Up Next</span>}
+        {isUpNext && <span className="upnext-badge">Up next!</span>}
         {e.sub && <span className="sub-label">{e.sub}</span>}
         <Wordmark entry={e} base={wordmarkBase} />
         {e.type === "netflix" && <span className="optional-badge">optional</span>}
         {isWatched && (
-          <span className="stamp">
-            <span>Watched</span>
+          <span className="stamp" aria-label="Watched">
+            <svg viewBox="0 0 100 100" aria-hidden="true">
+              <polygon points={STAMP_BURST} />
+            </svg>
+            <span className="stamp-word" aria-hidden="true">{sfxFor(e.id)}</span>
           </span>
         )}
         <button
-          className="quick-check absolute -right-1 -top-1 z-10 hidden h-6 w-6 items-center justify-center rounded-full border border-white/25 bg-black/70 text-[11px] leading-none text-white/80 opacity-0 transition-opacity group-hover:flex group-hover:opacity-100 hover:border-green-400 hover:text-green-300"
+          className="quick-check"
           title={isWatched ? "Mark as unwatched" : "Mark as watched"}
           onClick={(ev) => {
             ev.stopPropagation();
@@ -172,7 +189,7 @@ export default function Board({
   return (
     <div ref={containerRef} className="relative">
       <div
-        className="relative grid gap-x-2 gap-y-7"
+        className="relative grid gap-x-6 gap-y-10 sm:gap-x-9"
         style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
       >
         {rows.flatMap((row, ri) => {
@@ -220,8 +237,11 @@ export default function Board({
         <div className="portal-wrap" style={{ "--doom-glow": doomGlow } as React.CSSProperties}>
           <div className="doom-mist" />
           <div className="portal-ring" />
-          <div className="portal-ring inner" />
-          <div className="w-[min(240px,60vw)]">{renderCell(finale)}</div>
+          <div className="portal-ring inner" style={{ clipPath: FINALE_BURST }} />
+          <div className="relative z-[2] w-[min(240px,60vw)]">
+            {renderCell(finale)}
+            <span className="caption finale-caption">The final issue!</span>
+          </div>
         </div>
       )}
 

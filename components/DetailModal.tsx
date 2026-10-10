@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Entry } from "@/lib/timeline";
+import { burstPoints } from "@/lib/comic";
 import { TitleInfo } from "@/lib/tmdb";
 import Wordmark from "./Wordmark";
 
@@ -12,6 +13,8 @@ interface Props {
   onToggle: (entry: Entry) => void;
   onClose: () => void;
 }
+
+const SCORE_BURST = burstPoints(12, 0.74, 5);
 
 function searchUrl(entry: Entry) {
   const q = encodeURIComponent([entry.sub === "Thunderbolts*" ? "Thunderbolts" : entry.sub, entry.title].filter(Boolean).join(" "));
@@ -66,70 +69,63 @@ export default function DetailModal({ entry, watched, onToggle, onClose }: Props
         aria-modal="true"
         aria-label={entry.title}
       >
-        {/* backdrop header */}
-        <div className="relative h-44 w-full overflow-hidden rounded-t-[1.25rem] sm:h-56">
+        {/* backdrop header, screened like a printed panel */}
+        <div className="modal-hero h-48 w-full sm:h-60">
           {info?.backdrop ? (
-            <>
-              <Image src={info.backdrop} alt="" fill className="object-cover" sizes="680px" priority />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a12] via-[#0a0a12]/40 to-transparent" />
-            </>
+            <Image src={info.backdrop} alt="" fill className="object-cover" sizes="680px" priority />
           ) : (
-            <div
-              className="absolute inset-0 opacity-40"
-              style={{ backgroundImage: entry.wm.gradient }}
-            />
+            <div className="absolute inset-0 opacity-50" style={{ backgroundImage: entry.wm.gradient }} />
           )}
-          <div className="absolute bottom-3 left-5 right-5">
-            {entry.sub && <div className="sub-label mb-1">{entry.sub}</div>}
-            <Wordmark entry={entry} base={2.1} />
+          <div className="screen" />
+          <div className="title-caption">
+            {entry.sub && <div className="sub-label mb-0.5 text-[0.6rem] font-bold uppercase tracking-[0.18em]">{entry.sub}</div>}
+            <Wordmark entry={entry} base={1.9} />
           </div>
-          <button
-            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white/80 transition hover:bg-black/90 hover:text-white"
-            onClick={onClose}
-            aria-label="Close"
-          >
+          <button className="modal-close" onClick={onClose} aria-label="Close">
             ✕
           </button>
         </div>
 
         <div className="flex gap-5 p-5">
           {info?.poster && (
-            <div className="relative hidden h-[186px] w-[124px] shrink-0 overflow-hidden rounded-lg border border-white/10 shadow-lg sm:block">
+            <div className="modal-poster relative hidden h-[186px] w-[124px] shrink-0 overflow-hidden sm:block">
               <Image src={info.poster} alt={`${entry.title} poster`} fill className="object-cover" sizes="124px" />
             </div>
           )}
 
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/60">
-              <span className="text-white/90">{info?.releaseDate?.slice(0, 4) ?? entry.year}</span>
-              {info?.runtime ? <span>{Math.floor(info.runtime / 60)}h {info.runtime % 60}m</span> : null}
-              {info?.seasons ? (
-                <span>
-                  {info.seasons} season{info.seasons > 1 ? "s" : ""} · {info.episodes} eps
-                </span>
-              ) : null}
-              {info?.genres?.slice(0, 3).map((g) => (
-                <span key={g} className="rounded-full border border-white/15 px-2 py-0.5 text-[11px]">
-                  {g}
-                </span>
-              ))}
+            <div className="flex items-start gap-3">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1.5 text-sm font-bold">
+                <span className="f-bangers text-xl tracking-wide">{info?.releaseDate?.slice(0, 4) ?? entry.year}</span>
+                {info?.runtime ? <span>{Math.floor(info.runtime / 60)}h {info.runtime % 60}m</span> : null}
+                {info?.seasons ? (
+                  <span>
+                    {info.seasons} season{info.seasons > 1 ? "s" : ""} · {info.episodes} eps
+                  </span>
+                ) : null}
+                {info?.genres?.slice(0, 3).map((g) => (
+                  <span key={g} className="tag-chip">
+                    {g}
+                  </span>
+                ))}
+              </div>
               {score !== null && (
-                <span
-                  className="ml-auto rounded-full px-2.5 py-0.5 font-mono text-sm font-bold"
-                  style={{
-                    color: score >= 70 ? "#7dffab" : score >= 50 ? "#ffd82a" : "#ff6b6b",
-                    background: "rgba(255,255,255,0.07)",
-                  }}
+                <div
+                  className="score-burst -mt-2"
+                  style={{ "--score-color": score >= 70 ? "#2bd456" : score >= 50 ? "#ffd23f" : "#e62429" } as React.CSSProperties}
                   title={`${info?.votes?.toLocaleString()} ratings on TMDB`}
                 >
-                  ★ {score}%
-                </span>
+                  <svg viewBox="0 0 100 100" aria-hidden="true">
+                    <polygon points={SCORE_BURST} />
+                  </svg>
+                  <span>{score}%</span>
+                </div>
               )}
             </div>
 
-            {info?.tagline && <p className="mt-2 text-sm italic text-white/40">“{info.tagline}”</p>}
+            {info?.tagline && <p className="tagline-bubble mt-3">“{info.tagline}”</p>}
 
-            <p className="mt-2 text-sm leading-relaxed text-white/75">
+            <p className="mt-3 text-sm leading-relaxed">
               {loading
                 ? "Summoning intel…"
                 : info?.overview ??
@@ -139,7 +135,7 @@ export default function DetailModal({ entry, watched, onToggle, onClose }: Props
             </p>
 
             {info?.cast && info.cast.length > 0 && (
-              <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
+              <div className="mt-4 flex gap-3 overflow-x-auto px-0.5 pb-2">
                 {info.cast.map((c) => (
                   <div key={c.name} className="w-14 shrink-0 text-center">
                     {c.profile ? (
@@ -148,14 +144,14 @@ export default function DetailModal({ entry, watched, onToggle, onClose }: Props
                         alt={c.name}
                         width={56}
                         height={56}
-                        className="h-14 w-14 rounded-full border border-white/10 object-cover"
+                        className="cast-face h-14 w-14 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 text-lg">
+                      <div className="cast-face flex h-14 w-14 items-center justify-center rounded-full bg-[color:var(--yellow)] f-bangers text-xl">
                         {c.name[0]}
                       </div>
                     )}
-                    <div className="mt-1 truncate text-[10px] text-white/70" title={`${c.name} as ${c.character}`}>
+                    <div className="mt-1 truncate text-[10px] font-bold" title={`${c.name} as ${c.character}`}>
                       {c.name.split(" ")[0]}
                     </div>
                   </div>
@@ -165,23 +161,18 @@ export default function DetailModal({ entry, watched, onToggle, onClose }: Props
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 border-t border-white/10 px-5 py-4">
-          <a className="btn-disney" href={links.disney} target="_blank" rel="noopener noreferrer">
+        <div className="modal-actions flex flex-wrap items-center gap-3 px-5 py-4">
+          <a className="btn-comic btn-disney" href={links.disney} target="_blank" rel="noopener noreferrer">
             ▶ Watch on Disney+
           </a>
-          <a
-            className="text-xs uppercase tracking-[0.15em] text-white/45 underline-offset-4 hover:text-white/80 hover:underline"
-            href={links.justwatch}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <a className="link-ink" href={links.justwatch} target="_blank" rel="noopener noreferrer">
             All streaming options
           </a>
           <button
-            className={`btn-watched ml-auto ${watched ? "is-watched" : ""}`}
+            className={`btn-comic btn-watched ml-auto ${watched ? "is-watched" : ""}`}
             onClick={() => onToggle(entry)}
           >
-            {watched ? "↺ Unwatch" : "✓ Mark watched"}
+            {watched ? "↺ Unwatch" : "✓ Mark watched!"}
           </button>
         </div>
       </div>

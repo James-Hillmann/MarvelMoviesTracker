@@ -5,6 +5,7 @@ import {
   Bebas_Neue,
   Black_Ops_One,
   Cinzel,
+  Comic_Neue,
   Creepster,
   Monoton,
   Orbitron,
@@ -22,6 +23,7 @@ const cinzel = Cinzel({ weight: "700", subsets: ["latin"], variable: "--font-cin
 const creepster = Creepster({ weight: "400", subsets: ["latin"], variable: "--font-creepster" });
 const orbitron = Orbitron({ weight: "700", subsets: ["latin"], variable: "--font-orbitron" });
 const monoton = Monoton({ weight: "400", subsets: ["latin"], variable: "--font-monoton" });
+const comic = Comic_Neue({ weight: ["400", "700"], subsets: ["latin"], variable: "--font-comic" });
 const oswald = Oswald({ weight: ["300", "500"], subsets: ["latin"], variable: "--font-oswald" });
 
 export const metadata: Metadata = {
@@ -40,6 +42,7 @@ const fontVars = [
   orbitron,
   monoton,
   oswald,
+  comic,
 ]
   .map((f) => f.variable)
   .join(" ");

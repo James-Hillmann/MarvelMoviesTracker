@@ -5,6 +5,9 @@ import { RefObject, useEffect, useState } from "react";
 interface Point {
   x: number;
   y: number;
+  /** half extents, so arrows can stop at the panel's edge */
+  hw: number;
+  hh: number;
 }
 
 interface Props {
@@ -39,7 +42,13 @@ export default function ArrowPath({ containerRef, cellRefs, order, watched, layo
         const el = cellRefs.current?.get(id);
         if (!el) continue;
         const r = el.getBoundingClientRect();
-        next[id] = { x: r.left + r.width / 2 - cRect.left, y: r.top + r.height / 2 - cRect.top };
+        // offsetWidth/Height ignore the panels' tilt transform
+        next[id] = {
+          x: r.left + r.width / 2 - cRect.left,
+          y: r.top + r.height / 2 - cRect.top,
+          hw: el.offsetWidth / 2,
+          hh: el.offsetHeight / 2,
+        };
       }
       setPoints(next);
     };
@@ -61,14 +70,15 @@ export default function ArrowPath({ containerRef, cellRefs, order, watched, layo
     const done = Boolean(watched[order[i]]);
     let d: string;
     if (Math.abs(a.y - b.y) < 6) {
-      // same row — straight arrow, trimmed clear of the wordmarks
+      // same row — short arrow across the gutter between panels
       const dir = Math.sign(b.x - a.x) || 1;
-      const trim = Math.min(Math.abs(b.x - a.x) * 0.32, 70);
-      d = `M ${a.x + trim * dir} ${a.y} L ${b.x - trim * dir} ${b.y}`;
+      d = `M ${a.x + (a.hw + 4) * dir} ${a.y} L ${b.x - (b.hw + 7) * dir} ${b.y}`;
     } else {
-      // row wrap — S-curve from below the cell to above the next
-      const drop = 16;
-      d = `M ${a.x} ${a.y + drop} C ${a.x} ${a.y + drop + 26}, ${b.x} ${b.y - drop - 26}, ${b.x} ${b.y - drop}`;
+      // row wrap — S-curve from the panel's bottom edge to the next one's top
+      const y1 = a.y + a.hh + 6;
+      const y2 = b.y - b.hh - 9;
+      const bend = Math.max(12, (y2 - y1) * 0.5);
+      d = `M ${a.x} ${y1} C ${a.x} ${y1 + bend}, ${b.x} ${y2 - bend}, ${b.x} ${y2}`;
     }
     segs.push({ d, done, key: `${order[i]}->${order[i + 1]}:${done}` });
   }
@@ -77,11 +87,11 @@ export default function ArrowPath({ containerRef, cellRefs, order, watched, layo
   return (
     <svg className="trail-svg" aria-hidden="true">
       <defs>
-        <marker id="arrow-grey" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-          <path d="M 0 1 L 9 5 L 0 9 z" fill="rgba(255,255,255,0.35)" />
+        <marker id="arrow-grey" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(20,20,20,0.7)" />
         </marker>
-        <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-          <path d="M 0 1 L 9 5 L 0 9 z" fill="#35e06a" />
+        <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="2.6" markerHeight="2.6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#e62429" stroke="#141414" strokeWidth="1.2" />
         </marker>
       </defs>
       {segs.map((s) => {

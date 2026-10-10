@@ -76,37 +76,50 @@ export default function ProgressHeader({
   }
 
   return (
-    <header className="relative z-40 border-b border-white/10 bg-black/55 backdrop-blur-md sm:sticky sm:top-0">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-1.5 px-3 py-2 sm:gap-y-2 sm:px-4 sm:py-3">
-        {/* row 1: title · countdown · profile/settings */}
-        <h1 className="hdr-title text-xl sm:text-3xl">ROAD TO DOOMSDAY</h1>
+    <header className="masthead sm:sticky sm:top-0">
+      <div className="relative mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2.5 px-3 py-2.5 sm:gap-y-2 sm:px-4 sm:py-3">
+        {/* row 1: issue no. + title · countdown · profile/settings */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="issue-box" title="Movies watched">
+            <small>NO.</small>
+            <b>{watchedMovies}</b>
+          </div>
+          <h1 className="hdr-title text-[1.6rem] sm:text-[2.4rem]">Road to Doomsday!</h1>
+        </div>
 
         <div className="ml-auto flex items-center gap-3 sm:order-3 sm:ml-0">
-          <div className="text-right leading-tight" suppressHydrationWarning>
+          <div className="flex flex-col items-end gap-1 leading-tight" suppressHydrationWarning>
             {cd ? (
               <>
-                <div className="font-mono text-sm tabular-nums text-white/90 sm:text-xl">
-                  {cd.days}
-                  <span className="text-white/40">d </span>
-                  {String(cd.hours).padStart(2, "0")}
-                  <span className="text-white/40">h </span>
-                  {String(cd.mins).padStart(2, "0")}
-                  <span className="text-white/40">m </span>
-                  <span className="hidden sm:inline">
-                    {String(cd.secs).padStart(2, "0")}
-                    <span className="text-white/40">s</span>
+                <div className="flex gap-1 text-base sm:text-xl">
+                  <span className="cd-box">
+                    {cd.days}
+                    <small>D</small>
+                  </span>
+                  <span className="cd-box">
+                    {String(cd.hours).padStart(2, "0")}
+                    <small>H</small>
+                  </span>
+                  <span className="cd-box">
+                    {String(cd.mins).padStart(2, "0")}
+                    <small>M</small>
+                  </span>
+                  {/* wrapper carries the breakpoint: .cd-box's own display would beat the utility */}
+                  <span className="hidden sm:inline-flex">
+                    <span className="cd-box">
+                      {String(cd.secs).padStart(2, "0")}
+                      <small>S</small>
+                    </span>
                   </span>
                 </div>
-                <div className="text-[9px] uppercase tracking-[0.3em] text-[color:var(--doom-green)]/80 sm:text-[10px]">
-                  until Doomsday
-                </div>
+                <div className="cd-label text-[10px] sm:text-xs">until Doomsday!</div>
               </>
             ) : (
-              <div className="h-8 w-32 sm:h-9 sm:w-40" />
+              <div className="h-10 w-32 sm:h-12 sm:w-44" />
             )}
           </div>
 
-          {/* profile chip + settings dropdown */}
+        {/* profile chip + settings dropdown */}
           <div
             ref={menuRef}
             className="settings-wrap"
@@ -169,9 +182,9 @@ export default function ProgressHeader({
 
         {/* row 2: full-width progress bar */}
         <div className="order-3 w-full min-w-0 sm:order-2 sm:w-auto sm:min-w-[160px] sm:flex-1">
-          <div className="mb-1 flex items-baseline justify-between text-[10px] uppercase tracking-[0.2em] text-white/60 sm:text-[11px]">
+          <div className="mb-1 flex items-baseline justify-between text-xs font-bold uppercase tracking-wide sm:text-sm">
             <span>
-              <span className="text-white/95">{watchedMovies}</span> / {totalMovies} movies
+              <span className="f-bangers text-base tracking-wider text-[color:var(--red)] sm:text-lg">{watchedMovies}</span> of {totalMovies} movies
             </span>
             {showShows && (
               <span>
@@ -182,7 +195,7 @@ export default function ProgressHeader({
           <div className="progress-track">
             <div className="progress-fill" style={{ width: `${pct}%` }} />
           </div>
-          {pace && <div className="mt-1 text-[10px] tracking-wide text-white/45 sm:text-[11px]">{pace}</div>}
+          {pace && <div className="pace-note mt-1.5 text-[11px] sm:text-xs">{pace}</div>}
         </div>
       </div>
     </header>
