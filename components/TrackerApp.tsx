@@ -6,9 +6,10 @@ import { Profile, profileById } from "@/lib/profiles";
 import { COUNTED_MOVIES, Entry, MOVIES, moviesInOrder, PHASE_BOSSES, PHASE_COLORS, PHASE_LABELS, SHOWS } from "@/lib/timeline";
 import { useArtwork } from "@/lib/useArtwork";
 import { useProgress } from "@/lib/useProgress";
-import Board from "./Board";
+import Chapter from "./Chapter";
 import DetailModal from "./DetailModal";
 import Hero from "./Hero";
+import Premiere from "./Premiere";
 import ProfilePicker from "./ProfilePicker";
 import ProgressHeader from "./ProgressHeader";
 import SagaBackground from "./SagaBackground";
@@ -61,29 +62,61 @@ export default function TrackerApp() {
     saveSettings(orderMode, show);
   };
 
-  // poster wall density: 2-up on phones, 4-up on tablets, 3-up beside the TV
-  // column, a 6-wide shelf when the movies have the whole stage
-  const [viewport, setViewport] = useState<"phone" | "tablet" | "wide">("wide");
+  // phones get slightly smaller wordmarks on the title cards
+  const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const phone = window.matchMedia("(max-width: 640px)");
-    const tablet = window.matchMedia("(max-width: 1023px)");
-    const update = () => setViewport(phone.matches ? "phone" : tablet.matches ? "tablet" : "wide");
+    const mq = window.matchMedia("(max-width: 640px)");
+    const update = () => setIsMobile(mq.matches);
     update();
-    phone.addEventListener("change", update);
-    tablet.addEventListener("change", update);
-    return () => {
-      phone.removeEventListener("change", update);
-      tablet.removeEventListener("change", update);
-    };
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
   }, []);
-  const isMobile = viewport === "phone";
-  const movieCols = isMobile ? 2 : showShows ? 3 : viewport === "tablet" ? 4 : 6;
 
   const movieOrder = useMemo(() => moviesInOrder(orderMode), [orderMode]);
+  const finale = MOVIES.find((e) => e.id === "doomsday") as Entry;
+  const road = useMemo(() => movieOrder.filter((e) => e.id !== finale.id), [movieOrder, finale]);
+
+  // release order: one chapter per phase, each with its villain.
+  // timeline order: the same road cut into reels.
+  const chapters = useMemo(() => {
+    if (orderMode === "release") {
+      const phases = [...new Set(road.map((e) => e.phase as number))];
+      return phases.map((p) => {
+        const [title, saga] = PHASE_LABELS[p].split("—").map((x) => x.trim());
+        return {
+          key: `phase-${p}`,
+          number: p,
+          kicker: "Chapter",
+          title,
+          saga,
+          color: PHASE_COLORS[p],
+          boss: PHASE_BOSSES[p],
+          entries: road.filter((e) => e.phase === p),
+        };
+      });
+    }
+    const REEL = 8;
+    const words = ["One", "Two", "Three", "Four", "Five", "Six"];
+    const colors = Object.values(PHASE_COLORS);
+    return Array.from({ length: Math.ceil(road.length / REEL) }, (_, i) => ({
+      key: `reel-${i}`,
+      number: i + 1,
+      kicker: "Timeline",
+      title: `Reel ${words[i] ?? i + 1}`,
+      saga: undefined,
+      color: colors[Math.min(i, colors.length - 1)],
+      boss: undefined,
+      entries: road.slice(i * REEL, (i + 1) * REEL),
+    }));
+  }, [orderMode, road]);
+
+  const showChapters = [
+    { key: "netflix", number: 1, kicker: "Bonus", title: "The Defenders Saga", saga: "Netflix", color: "#c01218", boss: undefined, entries: SHOWS.filter((e) => e.type === "netflix") },
+    { key: "disney", number: 2, kicker: "Bonus", title: "The Series", saga: "Disney+", color: "#3a8ad4", boss: undefined, entries: SHOWS.filter((e) => e.type === "show") },
+  ];
 
   const watchedMovies = COUNTED_MOVIES.filter((e) => watched[e.id]).length;
   const watchedShows = SHOWS.filter((e) => watched[e.id]).length;
-  const doomGlow = COUNTED_MOVIES.length ? watchedMovies / COUNTED_MOVIES.length : 0;
 
   const upNextMovie = movieOrder.find((e) => !watched[e.id])?.id ?? null;
   const heroEntry = movieOrder.find((e) => e.id === upNextMovie) ?? movieOrder[movieOrder.length - 1];
@@ -144,69 +177,83 @@ export default function TrackerApp() {
         total={COUNTED_MOVIES.length}
         watchedCount={watchedMovies}
         allDone={upNextMovie === null || upNextMovie === "doomsday"}
+        reel={road.map((e) => ({ id: e.id, aura: e.wm.aura, on: Boolean(watched[e.id]) }))}
         art={art}
         onOpen={setSelected}
         onToggle={handleToggle}
       />
 
-      <main className="mx-auto max-w-6xl px-4 pb-24 pt-10">
-        <div className="flex flex-col gap-12 lg:flex-row lg:gap-8">
-          {/* movies — the main quest */}
-          <section className={showShows ? "min-w-0 lg:flex-[3]" : "w-full min-w-0"}>
+      <main className="mx-auto max-w-6xl px-4 pb-24 pt-14">
+        <div className="section-head">
+          <div>
+            <div className="section-kicker">{orderMode === "release" ? "Six chapters · six villains" : "In-universe order"}</div>
+            <h2 className="section-title">{orderMode === "release" ? "The Saga" : "The Timeline"}</h2>
+          </div>
+          <div className="order-switch" role="group" aria-label="Watch order">
+            <button className={orderMode === "release" ? "active" : ""} onClick={() => setOrderMode("release")}>
+              Release
+            </button>
+            <button className={orderMode === "chrono" ? "active" : ""} onClick={() => setOrderMode("chrono")}>
+              Timeline
+            </button>
+          </div>
+        </div>
+
+        <div className="chapters">
+          {chapters.map(({ key, ...c }) => (
+            <Chapter
+              key={`${orderMode}-${key}`}
+              {...c}
+              numberOf={(e) => movieOrder.indexOf(e) + 1}
+              watched={watched}
+              art={art}
+              upNextId={upNextMovie}
+              wordmarkBase={isMobile ? 1.0 : 1.1}
+              onSelect={setSelected}
+              onToggle={handleToggle}
+            />
+          ))}
+        </div>
+
+        <Premiere
+          finale={finale}
+          road={road}
+          watched={watched}
+          art={art}
+          onSelect={setSelected}
+          onToggle={handleToggle}
+        />
+
+        {/* shows — bonus features, never count toward the clock */}
+        {showShows && (
+          <div className="bonus">
             <div className="section-head">
-              <h2 className="section-title">The Movies</h2>
-              <div className="order-switch" role="group" aria-label="Watch order">
-                <button className={orderMode === "release" ? "active" : ""} onClick={() => setOrderMode("release")}>
-                  Release
-                </button>
-                <button className={orderMode === "chrono" ? "active" : ""} onClick={() => setOrderMode("chrono")}>
-                  Timeline
-                </button>
+              <div>
+                <div className="section-kicker">Side quest · {watchedShows}/{SHOWS.length} seen</div>
+                <h2 className="section-title">Bonus Features</h2>
               </div>
             </div>
-            <Board
-              entries={movieOrder}
-              cols={movieCols}
-              watched={watched}
-              upNextId={upNextMovie}
-              showPhases={orderMode === "release"}
-              finaleId="doomsday"
-              doomGlow={doomGlow}
-              layoutKey={`movies-${orderMode}-${movieCols}`}
-              art={art}
-              wordmarkBase={isMobile ? 1.15 : movieCols >= 4 ? 1.1 : 1.35}
-              onSelect={setSelected}
-              onQuickToggle={handleToggle}
-            />
-          </section>
-
-          {/* shows — the side quest */}
-          {showShows && (
-          <aside className="min-w-0 lg:flex-[2] lg:border-l lg:border-white/10 lg:pl-8">
-            <div className="section-head">
-              <h2 className="section-title">Side Quest · TV</h2>
-              <span className="section-meta">
-                {watchedShows}/{SHOWS.length}
-              </span>
-            </div>
-            <p className="mb-6 text-xs leading-relaxed text-white/45">
-              The shows don&apos;t count toward the Doomsday clock — knock them out whenever.
-              The first six are the Netflix era: semi-canon, skippable, but great.
+            <p className="bonus-note">
+              The shows don&apos;t count toward the Doomsday clock — knock them out whenever. The Netflix era is
+              semi-canon, skippable, but great.
             </p>
-            <Board
-              entries={SHOWS}
-              cols={2}
-              watched={watched}
-              upNextId={upNextShow}
-              layoutKey="shows"
-              art={art}
-              wordmarkBase={isMobile ? 1.0 : 1.15}
-              onSelect={setSelected}
-              onQuickToggle={handleToggle}
-            />
-          </aside>
-          )}
-        </div>
+            <div className="chapters">
+              {showChapters.map(({ key, ...c }) => (
+                <Chapter
+                  key={key}
+                  {...c}
+                  numberOf={(e) => SHOWS.indexOf(e) + 1}
+                  watched={watched}
+                  art={art}
+                  upNextId={upNextShow}
+                  wordmarkBase={isMobile ? 0.95 : 1.05}
+                  onSelect={setSelected}
+                  onToggle={handleToggle}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         <footer className="site-footer">
           {profile.label} vs. the Multiverse · data from TMDB

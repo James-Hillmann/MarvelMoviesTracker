@@ -15,13 +15,15 @@ interface Props {
   total: number;
   watchedCount: number;
   allDone: boolean;
+  /** every movie on the road, in order — drawn as a strip of frames */
+  reel: { id: string; aura: string; on: boolean }[];
   art: ArtMap;
   onOpen: (entry: Entry) => void;
   onToggle: (entry: Entry) => void;
 }
 
 /** Cinematic "Now showing" spotlight on the next movie plus the big Doomsday clock. */
-export default function Hero({ entry, position, total, watchedCount, allDone, art, onOpen, onToggle }: Props) {
+export default function Hero({ entry, position, total, watchedCount, allDone, reel, art, onOpen, onToggle }: Props) {
   const cd = useCountdown(DOOMSDAY_DATE);
   const [info, setInfo] = useState<TitleInfo | null>(null);
 
@@ -148,8 +150,14 @@ export default function Hero({ entry, position, total, watchedCount, allDone, ar
               </span>
               <span className="clock-pct">{Math.round(pct)}%</span>
             </div>
-            <div className="progress-track">
-              <div className="progress-fill" style={{ width: `${pct}%` }} />
+            <div className="reel-meter" aria-hidden="true">
+              {reel.map((f) => (
+                <span
+                  key={f.id}
+                  className={`reel-cell ${f.on ? "on" : ""} ${f.id === entry.id ? "here" : ""}`}
+                  style={{ "--c": f.aura } as React.CSSProperties}
+                />
+              ))}
             </div>
             {pace && <div className="clock-pace">{pace}</div>}
           </div>
