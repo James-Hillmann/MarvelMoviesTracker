@@ -15,6 +15,11 @@ interface Props {
   onShowShowsChange: (show: boolean) => void;
   profile: Profile;
   onSwitchProfile: () => void;
+  viewMode: "multiverse" | "classic";
+  /** omitted when the device can't run the 3D view */
+  onViewModeChange?: (mode: "multiverse" | "classic") => void;
+  /** pin to the viewport on every screen size (3D view) */
+  fixed?: boolean;
 }
 
 function useCountdown(target: string) {
@@ -44,6 +49,9 @@ export default function ProgressHeader({
   onShowShowsChange,
   profile,
   onSwitchProfile,
+  viewMode,
+  onViewModeChange,
+  fixed = false,
 }: Props) {
   const cd = useCountdown(DOOMSDAY_DATE);
   const remaining = totalMovies - watchedMovies;
@@ -76,7 +84,11 @@ export default function ProgressHeader({
   }
 
   return (
-    <header className="relative z-40 border-b border-white/10 bg-black/55 backdrop-blur-md sm:sticky sm:top-0">
+    <header
+      className={`z-40 border-b border-white/10 bg-black/55 backdrop-blur-md ${
+        fixed ? "fixed inset-x-0 top-0" : "relative sm:sticky sm:top-0"
+      }`}
+    >
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-1.5 px-3 py-2 sm:gap-y-2 sm:px-4 sm:py-3">
         {/* row 1: title · countdown · profile/settings */}
         <h1 className="hdr-title text-xl sm:text-3xl">ROAD TO DOOMSDAY</h1>
@@ -128,6 +140,25 @@ export default function ProgressHeader({
 
             {menuOpen && (
               <div className="settings-menu" role="menu">
+                {onViewModeChange && (
+                  <>
+                    <div className="settings-label">View</div>
+                    <div className="settings-seg">
+                      <button
+                        className={viewMode === "multiverse" ? "active" : ""}
+                        onClick={() => onViewModeChange("multiverse")}
+                      >
+                        3D Multiverse
+                      </button>
+                      <button
+                        className={viewMode === "classic" ? "active" : ""}
+                        onClick={() => onViewModeChange("classic")}
+                      >
+                        Classic
+                      </button>
+                    </div>
+                  </>
+                )}
                 <div className="settings-label">Watch order</div>
                 <div className="settings-seg">
                   <button

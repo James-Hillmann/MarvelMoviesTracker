@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { celebrate, phaseVictory } from "@/lib/confetti";
 import { Profile, profileById } from "@/lib/profiles";
@@ -11,7 +12,24 @@ import ProfilePicker from "./ProfilePicker";
 import ProgressHeader from "./ProgressHeader";
 import SagaBackground from "./SagaBackground";
 
+// three.js only ever runs in the browser, and only when the 3D view is on
+const MultiverseView = dynamic(() => import("./multiverse/MultiverseView"), {
+  ssr: false,
+  loading: () => <div className="mv-loading">Opening the multiverse…</div>,
+});
+
 const PROFILE_STORAGE_KEY = "mcu-profile";
+
+export type ViewMode = "multiverse" | "classic";
+
+function webglAvailable() {
+  try {
+    const c = document.createElement("canvas");
+    return Boolean(c.getContext("webgl2") || c.getContext("webgl"));
+  } catch {
+    return false;
+  }
+}
 
 export default function TrackerApp() {
   // null = not yet loaded from storage; "" = loaded, none picked
@@ -31,31 +49,54 @@ export default function TrackerApp() {
   const [orderMode, setOrderModeState] = useState<"release" | "chrono">("release");
   const [showShows, setShowShowsState] = useState(false);
   const [selected, setSelected] = useState<Entry | null>(null);
+  // null until we know whether this device can (and should) run 3D
+  const [viewMode, setViewModeState] = useState<ViewMode | null>(null);
+  const [canWebgl, setCanWebgl] = useState(true);
+  const [showsOpen, setShowsOpen] = useState(false);
 
   // per-device display settings
   useEffect(() => {
+    const gl = webglAvailable();
+    setCanWebgl(gl);
+    let mode: ViewMode | undefined;
     try {
       const saved = JSON.parse(localStorage.getItem("mcu-settings") ?? "{}") as {
         orderMode?: "release" | "chrono";
         showShows?: boolean;
+        viewMode?: ViewMode;
       };
       if (saved.orderMode === "chrono" || saved.orderMode === "release") setOrderModeState(saved.orderMode);
       if (typeof saved.showShows === "boolean") setShowShowsState(saved.showShows);
+      if (saved.viewMode === "multiverse" || saved.viewMode === "classic") mode = saved.viewMode;
     } catch {
       /* corrupt settings — defaults win */
     }
+    // phones, reduced-motion and no-WebGL devices default to the classic board
+    const preferClassic =
+      window.matchMedia("(max-width: 640px)").matches ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!gl) mode = "classic";
+    setViewModeState(mode ?? (preferClassic ? "classic" : "multiverse"));
   }, []);
 
-  const saveSettings = (orderModeVal: "release" | "chrono", showShowsVal: boolean) => {
-    localStorage.setItem("mcu-settings", JSON.stringify({ orderMode: orderModeVal, showShows: showShowsVal }));
+  const saveSettings = (orderModeVal: "release" | "chrono", showShowsVal: boolean, viewModeVal: ViewMode | null) => {
+    localStorage.setItem(
+      "mcu-settings",
+      JSON.stringify({ orderMode: orderModeVal, showShows: showShowsVal, viewMode: viewModeVal ?? undefined }),
+    );
   };
   const setOrderMode = (mode: "release" | "chrono") => {
     setOrderModeState(mode);
-    saveSettings(mode, showShows);
+    saveSettings(mode, showShows, viewMode);
   };
   const setShowShows = (show: boolean) => {
     setShowShowsState(show);
-    saveSettings(orderMode, show);
+    saveSettings(orderMode, show, viewMode);
+  };
+  const setViewMode = (mode: ViewMode) => {
+    setViewModeState(mode);
+    saveSettings(orderMode, showShows, mode);
+    window.scrollTo({ top: 0 });
   };
 
   // phones get a roomier 2-wide snake so wordmarks don't wrap into mush
@@ -94,7 +135,7 @@ export default function TrackerApp() {
   };
 
   // wait for localStorage before rendering anything (avoids a picker flash)
-  if (profileId === null) {
+  if (profileId === null || viewMode === null) {
     return <div className="min-h-screen" />;
   }
 
@@ -109,7 +150,7 @@ export default function TrackerApp() {
 
   return (
     <div className="relative min-h-screen">
-      <SagaBackground />
+      {viewMode === "classic" && <SagaBackground />}
 
       <ProgressHeader
         watchedMovies={watchedMovies}
@@ -125,8 +166,58 @@ export default function TrackerApp() {
           localStorage.removeItem(PROFILE_STORAGE_KEY);
           setProfileId("");
         }}
+        viewMode={viewMode}
+        onViewModeChange={canWebgl ? setViewMode : undefined}
+        fixed={viewMode === "multiverse"}
       />
 
+      {viewMode === "multiverse" ? (
+        <>
+          <MultiverseView
+            entries={movieOrder}
+            watched={watched}
+            upNextId={upNextMovie}
+            showPhases={orderMode === "release"}
+            finaleId="doomsday"
+            doomGlow={doomGlow}
+            paused={Boolean(selected) || showsOpen}
+            onSelect={setSelected}
+            onQuickToggle={handleToggle}
+          />
+          {showShows && (
+            <>
+              <button className="mv-shows-btn" onClick={() => setShowsOpen(true)}>
+                Side quest · TV <span className="text-white/50">{watchedShows}/{SHOWS.length}</span>
+              </button>
+              {showsOpen && (
+                <div className="mv-drawer-overlay" onClick={() => setShowsOpen(false)}>
+                  <aside className="mv-drawer" onClick={(e) => e.stopPropagation()}>
+                    <div className="mb-4 flex items-baseline justify-between">
+                      <h2 className="f-bebas text-lg tracking-[0.35em] text-white/70">SIDE QUEST · TV</h2>
+                      <button className="text-white/60 hover:text-white" onClick={() => setShowsOpen(false)} aria-label="Close">
+                        ✕
+                      </button>
+                    </div>
+                    <p className="mb-6 text-xs leading-relaxed text-white/40">
+                      The shows don&apos;t count toward the Doomsday clock — knock them out whenever.
+                    </p>
+                    <Board
+                      entries={SHOWS}
+                      cols={2}
+                      watched={watched}
+                      upNextId={upNextShow}
+                      layoutKey="shows-drawer"
+                      wordmarkBase={1.0}
+                      onSelect={setSelected}
+                      onQuickToggle={handleToggle}
+                    />
+                  </aside>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      ) : (
       <main className="mx-auto max-w-6xl px-4 pb-24 pt-8">
         <div className="flex flex-col gap-12 lg:flex-row lg:gap-8">
           {/* movies — the main quest */}
@@ -183,6 +274,7 @@ export default function TrackerApp() {
           {profile.label} vs. the Multiverse · data from TMDB
         </footer>
       </main>
+      )}
 
       {selected && (
         <DetailModal
