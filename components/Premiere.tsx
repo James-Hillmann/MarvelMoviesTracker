@@ -27,7 +27,7 @@ interface Props {
   watched: Record<string, number>;
   art: ArtMap;
   onSelect: (e: Entry) => void;
-  onToggle: (e: Entry) => void;
+  onToggle: (e: Entry, origin?: Element | null) => void;
 }
 
 /**
@@ -92,7 +92,7 @@ export default function Premiere({ finale, road, watched, art, onSelect, onToggl
       </div>
 
       {(ready || seen) && (
-        <button className={`btn-ghost premiere-seen ${seen ? "is-watched" : ""}`} onClick={() => onToggle(finale)}>
+        <button className={`btn-ghost premiere-seen ${seen ? "is-watched" : ""}`} onClick={(ev) => onToggle(finale, ev.currentTarget)}>
           {seen ? "↺ Unwatch Doomsday" : "✓ I've seen Doomsday"}
         </button>
       )}

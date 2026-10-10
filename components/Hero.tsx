@@ -19,7 +19,7 @@ interface Props {
   reel: { id: string; aura: string; on: boolean }[];
   art: ArtMap;
   onOpen: (entry: Entry) => void;
-  onToggle: (entry: Entry) => void;
+  onToggle: (entry: Entry, origin?: Element | null) => void;
 }
 
 /** Cinematic "Now showing" spotlight on the next movie plus the big Doomsday clock. */
@@ -110,7 +110,7 @@ export default function Hero({ entry, position, total, watchedCount, allDone, re
               <span aria-hidden="true">▶</span> Details &amp; where to watch
             </button>
             {!allDone && (
-              <button className="btn-ghost" onClick={() => onToggle(entry)}>
+              <button className="btn-ghost" onClick={(ev) => onToggle(entry, ev.currentTarget)}>
                 <span aria-hidden="true">✓</span> Mark watched
               </button>
             )}

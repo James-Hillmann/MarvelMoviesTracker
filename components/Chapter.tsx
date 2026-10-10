@@ -30,7 +30,7 @@ interface FrameProps {
   animate: boolean;
   wordmarkBase: number;
   onSelect: (entry: Entry) => void;
-  onToggle: (entry: Entry) => void;
+  onToggle: (entry: Entry, origin?: Element | null) => void;
 }
 
 /**
@@ -61,6 +61,7 @@ function Frame({ entry: e, number, poster, watchedAt, upNext, animate, wordmarkB
       className={`frame ${state} ${justDeveloped ? "just-developed" : ""}`}
       style={{ "--aura": e.wm.aura } as React.CSSProperties}
       data-upnext={upNext || undefined}
+      data-entry-id={e.id}
     >
       {upNext && <div className="frame-beam" aria-hidden="true" />}
       <button className="frame-card" onClick={() => onSelect(e)} aria-label={label}>
@@ -94,7 +95,7 @@ function Frame({ entry: e, number, poster, watchedAt, upNext, animate, wordmarkB
         {watched ? (
           <button
             className="stub"
-            onClick={() => onToggle(e)}
+            onClick={(ev) => onToggle(e, ev.currentTarget.closest(".frame"))}
             title="Seen it — tap to tear the stub back off"
             aria-label={`Mark ${e.title} as unwatched`}
           >
@@ -102,7 +103,7 @@ function Frame({ entry: e, number, poster, watchedAt, upNext, animate, wordmarkB
             <span className="stub-date">Seen {seenOn(watchedAt as number)}</span>
           </button>
         ) : (
-          <button className="develop" onClick={() => onToggle(e)} aria-label={`Mark ${e.title} as watched`}>
+          <button className="develop" onClick={(ev) => onToggle(e, ev.currentTarget.closest(".frame"))} aria-label={`Mark ${e.title} as watched`}>
             <span className="develop-dot" aria-hidden="true" />
             {upNext ? "Seen it" : "Mark seen"}
           </button>
@@ -131,7 +132,7 @@ function FilmStrip({
   upNextId: string | null;
   wordmarkBase: number;
   onSelect: (e: Entry) => void;
-  onToggle: (e: Entry) => void;
+  onToggle: (e: Entry, origin?: Element | null) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState({ start: true, end: false });
@@ -227,7 +228,7 @@ interface ChapterProps {
   upNextId: string | null;
   wordmarkBase: number;
   onSelect: (e: Entry) => void;
-  onToggle: (e: Entry) => void;
+  onToggle: (e: Entry, origin?: Element | null) => void;
 }
 
 /** A phase as a movie chapter: title card, the villain looming behind, and its reel. */

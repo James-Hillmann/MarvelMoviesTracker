@@ -2319,6 +2319,189 @@ body {
 
 }
 
+/* ---------- check-off effects (lib/effects.ts) ---------- */
+.fx-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 75;
+}
+
+.fx-shake { animation: fx-shake 0.35s linear; }
+.fx-shake-big { animation: fx-shake-big 0.6s linear; }
+@keyframes fx-shake {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-4px, 2px); }
+  40% { transform: translate(4px, -3px); }
+  60% { transform: translate(-3px, -2px); }
+  80% { transform: translate(3px, 3px); }
+}
+@keyframes fx-shake-big {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  10% { transform: translate(-12px, 6px) rotate(-0.6deg); }
+  25% { transform: translate(10px, -8px) rotate(0.5deg); }
+  40% { transform: translate(-8px, -4px) rotate(-0.3deg); }
+  55% { transform: translate(7px, 6px) rotate(0.3deg); }
+  70% { transform: translate(-4px, 2px); }
+  85% { transform: translate(2px, -2px); }
+}
+
+.cell.fx-hit { animation: fx-hit 0.6s cubic-bezier(0.2, 1.4, 0.4, 1); z-index: 5; }
+@keyframes fx-hit {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 var(--aura, #e8b64c); }
+  25% { transform: scale(1.25) rotate(-2deg); box-shadow: 0 0 60px 12px var(--aura, #e8b64c); background: color-mix(in srgb, var(--aura, #e8b64c) 35%, transparent); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 transparent; }
+}
+.cell.fx-shrink { animation: fx-shrink 0.9s cubic-bezier(0.5, 0, 0.3, 1.4); z-index: 5; }
+@keyframes fx-shrink {
+  0% { transform: scale(1); }
+  55% { transform: scale(0.08); filter: hue-rotate(90deg) brightness(2); }
+  75% { transform: scale(1.35); filter: none; }
+  100% { transform: scale(1); }
+}
+
+.progress-fill.fx-surge { animation: fx-surge 1s ease-out; }
+@keyframes fx-surge {
+  0% { filter: brightness(1); box-shadow: 0 0 12px rgba(53, 224, 106, 0.7); }
+  20% { filter: brightness(2.2); box-shadow: 0 0 30px 6px rgba(53, 224, 106, 1); }
+  100% { filter: brightness(1); box-shadow: 0 0 12px rgba(53, 224, 106, 0.7); }
+}
+
+.fx-pow {
+  position: fixed;
+  z-index: 80;
+  pointer-events: none;
+  translate: -50% -50%;
+  font-family: var(--font-bangers), sans-serif;
+  font-size: clamp(2.2rem, 7vw, 4.2rem);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: #fff7d6;
+  -webkit-text-stroke: 2px #111;
+  paint-order: stroke fill;
+  text-shadow:
+    4px 4px 0 var(--pow-color, #ec1d24),
+    7px 7px 0 #111;
+  animation: fx-pow 1.3s cubic-bezier(0.2, 1.6, 0.4, 1) forwards;
+}
+@keyframes fx-pow {
+  0% { transform: rotate(var(--pow-tilt)) scale(0.2); opacity: 0; }
+  18% { transform: rotate(var(--pow-tilt)) scale(1.25); opacity: 1; }
+  30% { transform: rotate(var(--pow-tilt)) scale(1); }
+  75% { transform: rotate(var(--pow-tilt)) scale(1.04) translateY(-6px); opacity: 1; }
+  100% { transform: rotate(var(--pow-tilt)) scale(1.1) translateY(-26px); opacity: 0; }
+}
+
+.fx-xp {
+  position: fixed;
+  z-index: 80;
+  pointer-events: none;
+  translate: -50% 0;
+  font-family: var(--font-bebas), sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 0.2em;
+  color: #fff;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--xp-color, #35e06a) 35%, rgba(0, 0, 0, 0.7));
+  border: 1px solid var(--xp-color, #35e06a);
+  box-shadow: 0 0 18px var(--xp-color, #35e06a);
+  animation: fx-xp 1.8s ease-out forwards;
+}
+@keyframes fx-xp {
+  0% { transform: translateY(10px) scale(0.6); opacity: 0; }
+  15% { transform: translateY(0) scale(1.1); opacity: 1; }
+  70% { transform: translateY(4px) scale(1); opacity: 1; }
+  100% { transform: translateY(24px); opacity: 0; }
+}
+
+.fx-combo {
+  position: fixed;
+  right: 18px;
+  bottom: 22px;
+  z-index: 80;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 0.9;
+  font-family: var(--font-bangers), sans-serif;
+  color: #ffd166;
+  -webkit-text-stroke: 1.5px #111;
+  paint-order: stroke fill;
+  text-shadow: 3px 3px 0 #ec1d24;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.fx-combo .fx-combo-n { font-size: 3.4rem; }
+.fx-combo .fx-combo-label { font-size: 1.1rem; letter-spacing: 0.12em; color: #fff; }
+.fx-combo.bump { animation: fx-combo-bump 0.45s cubic-bezier(0.2, 1.8, 0.4, 1); }
+.fx-combo.out { opacity: 0; transform: translateY(20px); }
+@keyframes fx-combo-bump {
+  0% { transform: scale(0.5) rotate(-8deg); }
+  60% { transform: scale(1.25) rotate(4deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+.fx-milestone {
+  position: fixed;
+  inset: 0;
+  z-index: 78;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  text-align: center;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55), transparent 65%);
+  animation: fx-ms 3.2s ease forwards;
+}
+.fx-milestone .fx-ms-title {
+  font-family: var(--font-anton), sans-serif;
+  font-size: clamp(2.2rem, 8vw, 5.5rem);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  background: linear-gradient(180deg, #fff 15%, var(--ms-color) 60%, #5a3a10 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 24px var(--ms-color));
+  animation: pv-slam 0.5s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+}
+.fx-milestone .fx-ms-sub {
+  font-family: var(--font-oswald), sans-serif;
+  font-size: clamp(0.8rem, 2.4vw, 1.1rem);
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.8);
+  animation: pv-rise 0.5s ease 0.4s both;
+}
+@keyframes fx-ms {
+  0% { opacity: 0; }
+  8% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* reduced motion: a plain confirmation, nothing moves */
+.fx-static-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  translate: -50% 0;
+  z-index: 80;
+  pointer-events: none;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(53, 224, 106, 0.6);
+  background: rgba(5, 5, 8, 0.85);
+  color: #fff;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+}
+
 /* ---------- reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -2768,4 +2951,167 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .badge-toast { animation: none; }
+}
+
+/* =====================================================================
+   CINEMATIC SKIN for the War Room, ratings, badges and check-off effects
+   ===================================================================== */
+.warroom-btn {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.warroom-btn > span:first-child { color: var(--doom-green); text-shadow: 0 0 8px var(--doom-green); }
+
+.warroom-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 18px rgba(61, 255, 110, 0.2);
+}
+
+.wr-head {
+  padding: 1.4rem 1.6rem 0.6rem;
+  background:
+    radial-gradient(90% 160% at 0% 0%, color-mix(in srgb, var(--aura) 20%, transparent), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent);
+}
+
+.wr-kicker {
+  font-weight: 600;
+  letter-spacing: 0.34em;
+}
+
+.wr-title {
+  font-size: clamp(2.2rem, 6vw, 3rem);
+  letter-spacing: 0.04em;
+  background: linear-gradient(180deg, #fff 35%, color-mix(in srgb, var(--aura) 70%, white) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.wr-tabs button,
+.wr-h3,
+.wr-verdict-tag,
+.rate-label,
+.day-picks button,
+.badge .badge-name,
+.badge-toast-name {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.wr-tabs button { font-size: 0.72rem; letter-spacing: 0.18em; padding: 0.7rem 0.9rem 0.6rem; }
+.wr-h3 { font-size: 0.66rem; letter-spacing: 0.3em; color: var(--ink-3); }
+.wr-verdict-tag { font-size: 0.72rem; letter-spacing: 0.16em; }
+.rate-label { font-size: 0.66rem; letter-spacing: 0.22em; }
+.day-picks button { font-size: 0.66rem; letter-spacing: 0.12em; }
+.badge .badge-name { font-size: 0.72rem; letter-spacing: 0.08em; }
+.badge-toast-name { font-size: 0.95rem; letter-spacing: 0.04em; text-transform: none; }
+
+.wr-tile {
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.wr-tile-value { font-size: 2.1rem; }
+
+.badge {
+  border-radius: 12px;
+}
+
+/* a badge is a little film-festival laurel once earned */
+.badge.got {
+  background:
+    radial-gradient(100% 80% at 50% 0%, color-mix(in srgb, var(--aura) 20%, transparent), transparent 70%),
+    rgba(255, 255, 255, 0.03);
+}
+
+.badge-toast {
+  border-radius: 14px;
+  background: rgba(12, 12, 18, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.rate-row {
+  padding: 0.9rem 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+/* ---- check-off effects, cinema cut ---- */
+/* the sound effect lands like a title card, not a comic panel */
+.fx-pow {
+  font-family: var(--font-anton), sans-serif;
+  font-size: clamp(2rem, 6vw, 3.6rem);
+  letter-spacing: 0.06em;
+  color: #fff;
+  -webkit-text-stroke: 0;
+  text-shadow:
+    0 0 24px var(--pow-color, #e8b64c),
+    0 0 60px color-mix(in srgb, var(--pow-color, #e8b64c) 60%, transparent),
+    0 4px 18px rgba(0, 0, 0, 0.8);
+  animation: fx-title 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fx-title {
+  0% { transform: rotate(0deg) scale(1.6); opacity: 0; filter: blur(10px); letter-spacing: 0.4em; }
+  20% { transform: rotate(0deg) scale(1); opacity: 1; filter: blur(0); letter-spacing: 0.06em; }
+  75% { transform: rotate(0deg) scale(1.02) translateY(-4px); opacity: 1; }
+  100% { transform: rotate(0deg) scale(1.04) translateY(-20px); opacity: 0; filter: blur(4px); }
+}
+
+.fx-xp {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+}
+
+.fx-combo {
+  font-family: var(--font-anton), sans-serif;
+  color: #fff;
+  -webkit-text-stroke: 0;
+  text-shadow: 0 0 20px rgba(232, 182, 76, 0.7);
+  padding: 0.6rem 0.9rem 0.55rem;
+  border-radius: 12px;
+  background: rgba(10, 10, 14, 0.75);
+  border: 1px solid rgba(232, 182, 76, 0.4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.fx-combo .fx-combo-n { font-size: 2.6rem; color: #ffe39e; }
+.fx-combo .fx-combo-label {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: none;
+}
+
+.frame.fx-hit .frame-card { animation: fx-frame-hit 0.7s cubic-bezier(0.2, 1.4, 0.4, 1); }
+
+@keyframes fx-frame-hit {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.12) rotate(-1.5deg); box-shadow: 0 0 0 2px var(--aura), 0 0 70px 14px var(--aura); }
+  100% { transform: scale(1); }
+}
+
+.frame.fx-shrink .frame-card { animation: fx-shrink 0.9s cubic-bezier(0.5, 0, 0.3, 1.4); }
+
+.fx-static-toast { font-family: var(--font-inter), system-ui, sans-serif; }
+
+@media (max-width: 640px) {
+  .warroom-btn { padding: 7px 10px; }
 }

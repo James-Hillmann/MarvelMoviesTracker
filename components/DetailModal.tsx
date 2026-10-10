@@ -16,7 +16,7 @@ interface Props {
   /** this profile's 1–10 rating */
   rating?: number;
   onRate: (v: number | null) => void;
-  onToggle: (entry: Entry) => void;
+  onToggle: (entry: Entry, origin?: Element | null) => void;
   onClose: () => void;
 }
 
@@ -198,7 +198,7 @@ export default function DetailModal({ entry, watched, profileId, rating, onRate,
           </a>
           <button
             className={`btn-ghost ml-auto ${watched ? "is-watched" : ""}`}
-            onClick={() => onToggle(entry)}
+            onClick={(ev) => onToggle(entry, ev.currentTarget)}
           >
             {watched ? "↺ Unwatch" : "✓ Mark watched"}
           </button>

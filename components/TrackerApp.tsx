@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { celebrate, phaseVictory } from "@/lib/confetti";
+import { phaseVictory } from "@/lib/confetti";
+import { checkOffFx, uncheckFx } from "@/lib/effects";
 import { Profile, profileById } from "@/lib/profiles";
 import { COUNTED_MOVIES, Entry, MOVIES, moviesInOrder, PHASE_BOSSES, PHASE_COLORS, PHASE_LABELS, SHOWS } from "@/lib/timeline";
 import { useArtwork } from "@/lib/useArtwork";
@@ -127,19 +128,35 @@ export default function TrackerApp() {
   const heroEntry = movieOrder.find((e) => e.id === upNextMovie) ?? movieOrder[movieOrder.length - 1];
   const upNextShow = SHOWS.find((e) => !watched[e.id])?.id ?? null;
 
-  const handleToggle = async (entry: Entry) => {
-    const nowWatched = await toggle(entry.id);
-    if (!nowWatched) return;
-    // did this watch clear the whole phase? then it's a boss kill, not a confetti pop
+  const handleToggle = async (entry: Entry, origin?: Element | null) => {
+    // fire effects on the click, not after the network round-trip
+    const willWatch = !watched[entry.id];
+    if (!willWatch) {
+      uncheckFx(entry, origin);
+      await toggle(entry.id);
+      return;
+    }
+    // did this watch clear the whole phase? then it's a boss kill on top of the fireworks
     const phase = entry.phase;
     const boss = phase !== undefined ? PHASE_BOSSES[phase] : undefined;
     const clearedPhase =
       boss && MOVIES.filter((m) => m.phase === phase).every((m) => m.id === entry.id || watched[m.id]);
+    const counted = COUNTED_MOVIES.some((m) => m.id === entry.id);
+    checkOffFx({
+      entry,
+      origin,
+      before: watchedMovies,
+      after: watchedMovies + (counted ? 1 : 0),
+      total: COUNTED_MOVIES.length,
+      bossKill: Boolean(clearedPhase),
+    });
     if (clearedPhase && phase !== undefined) {
-      phaseVictory(PHASE_LABELS[phase].split("—")[0].trim(), boss.name, boss.quip, PHASE_COLORS[phase], boss.img);
-    } else {
-      celebrate(entry.wm.aura);
+      setTimeout(
+        () => phaseVictory(PHASE_LABELS[phase].split("—")[0].trim(), boss.name, boss.quip, PHASE_COLORS[phase], boss.img),
+        700,
+      );
     }
+    await toggle(entry.id);
   };
 
   // wait for localStorage before rendering anything (avoids a picker flash)
@@ -189,7 +206,8 @@ export default function TrackerApp() {
         onToggle={handleToggle}
       />
 
-      <main className="mx-auto max-w-6xl px-4 pb-24 pt-14">
+      {/* data-fx-shake: effects shake this, not the root — a transform there would unpin the fixed background */}
+      <main className="mx-auto max-w-6xl px-4 pb-24 pt-14" data-fx-shake>
         <div className="section-head">
           <div>
             <div className="section-kicker">{orderMode === "release" ? "Six chapters · six villains" : "In-universe order"}</div>
