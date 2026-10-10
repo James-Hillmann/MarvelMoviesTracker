@@ -14,18 +14,35 @@ const POP_INNER = burstPoints(16, 0.62, 11)
   .join(" ");
 const DEFEAT_BURST = burstPoints(20, 0.78, 4);
 
-export function celebrate(color: string) {
+/** `origin` is the panel that was just read — the burst lands on it */
+export function celebrate(color: string, origin?: Element | null) {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const at = originPoint(origin);
   screenFlash(color);
-  soundEffect(color);
-  confettiBurst(color);
+  soundEffect(color, at);
+  confettiBurst(color, at);
+}
+
+function originPoint(origin?: Element | null) {
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const r = origin?.getBoundingClientRect();
+  // off-screen (e.g. toggled from the detail sheet) → centre stage
+  if (!r || r.bottom < 0 || r.top > H || origin?.closest("[aria-hidden='true']")) return { x: W / 2, y: H * 0.45 };
+  const margin = Math.min(W, H) * 0.22;
+  return {
+    x: Math.min(W - margin, Math.max(margin, r.left + r.width / 2)),
+    y: Math.min(H - margin, Math.max(margin, r.top + r.height / 2)),
+  };
 }
 
 /** big onomatopoeia that slams onto the page, then blows away */
-function soundEffect(color: string) {
+function soundEffect(color: string, at: { x: number; y: number }) {
   const el = document.createElement("div");
   el.className = "kapow";
   el.style.setProperty("--kp-color", color);
+  el.style.setProperty("--kp-x", `${at.x}px`);
+  el.style.setProperty("--kp-y", `${at.y}px`);
   el.innerHTML = `
     <div class="kp-lines"></div>
     <div class="kp-burst">
@@ -75,7 +92,7 @@ function screenFlash(color: string) {
   el.addEventListener("animationend", () => el.remove());
 }
 
-function confettiBurst(color: string) {
+function confettiBurst(color: string, at?: { x: number; y: number }) {
   const canvas = document.createElement("canvas");
   canvas.style.cssText = "position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:70";
   canvas.width = window.innerWidth * devicePixelRatio;
@@ -89,8 +106,8 @@ function confettiBurst(color: string) {
   const W = window.innerWidth;
   const H = window.innerHeight;
   const parts = Array.from({ length: 110 }, () => ({
-    x: W / 2 + (Math.random() - 0.5) * W * 0.3,
-    y: H * 0.45,
+    x: (at?.x ?? W / 2) + (Math.random() - 0.5) * Math.min(W * 0.3, 260),
+    y: at?.y ?? H * 0.45,
     vx: (Math.random() - 0.5) * 14,
     vy: -6 - Math.random() * 10,
     size: 4 + Math.random() * 6,

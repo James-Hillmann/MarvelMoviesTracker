@@ -2,9 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Profile } from "@/lib/profiles";
-import { DOOMSDAY_DATE } from "@/lib/timeline";
+import { DOOMSDAY_DATE, Entry } from "@/lib/timeline";
+
+interface Spine {
+  id: string;
+  title: string;
+  aura: string;
+  read: boolean;
+}
 
 interface Props {
+  /** one comic spine per counted movie, in reading order */
+  spines: Spine[];
+  upNext: Entry | null;
   watchedMovies: number;
   totalMovies: number;
   watchedShows: number;
@@ -34,6 +44,8 @@ function useCountdown(target: string) {
 }
 
 export default function ProgressHeader({
+  spines,
+  upNext,
   watchedMovies,
   totalMovies,
   watchedShows,
@@ -47,7 +59,6 @@ export default function ProgressHeader({
 }: Props) {
   const cd = useCountdown(DOOMSDAY_DATE);
   const remaining = totalMovies - watchedMovies;
-  const pct = totalMovies ? (watchedMovies / totalMovies) * 100 : 0;
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -75,51 +86,37 @@ export default function ProgressHeader({
     pace = "Caught up. Doomsday awaits.";
   }
 
+  const continueReading = () => {
+    if (!upNext) return;
+    const el = document.querySelector<HTMLElement>(`[data-entry="${upNext.id}"]`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    el?.focus({ preventScroll: true });
+  };
+
   return (
     <header className="masthead sm:sticky sm:top-0">
-      <div className="relative mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2.5 px-3 py-2.5 sm:gap-y-2 sm:px-4 sm:py-3">
-        {/* row 1: issue no. + title · countdown · profile/settings */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
-          <div className="issue-box" title="Movies watched">
-            <small>NO.</small>
-            <b>{watchedMovies}</b>
-          </div>
-          <h1 className="hdr-title text-[1.6rem] sm:text-[2.4rem]">Road to Doomsday!</h1>
-        </div>
+      <div className="relative mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-2.5 px-3 py-2.5 sm:px-4 sm:py-3">
+        {/* row 1: logo · next-issue countdown · profile/settings */}
+        <h1 className="hdr-title text-[1.6rem] sm:text-[2.3rem]">Road to Doomsday!</h1>
 
         <div className="ml-auto flex items-center gap-3 sm:order-3 sm:ml-0">
-          <div className="flex flex-col items-end gap-1 leading-tight" suppressHydrationWarning>
+          <div className="next-issue" suppressHydrationWarning>
+            <span className="ni-label">Next issue: Doomsday</span>
             {cd ? (
-              <>
-                <div className="flex gap-1 text-base sm:text-xl">
-                  <span className="cd-box">
-                    {cd.days}
-                    <small>D</small>
-                  </span>
-                  <span className="cd-box">
-                    {String(cd.hours).padStart(2, "0")}
-                    <small>H</small>
-                  </span>
-                  <span className="cd-box">
-                    {String(cd.mins).padStart(2, "0")}
-                    <small>M</small>
-                  </span>
-                  {/* wrapper carries the breakpoint: .cd-box's own display would beat the utility */}
-                  <span className="hidden sm:inline-flex">
-                    <span className="cd-box">
-                      {String(cd.secs).padStart(2, "0")}
-                      <small>S</small>
-                    </span>
-                  </span>
-                </div>
-                <div className="cd-label text-[10px] sm:text-xs">until Doomsday!</div>
-              </>
+              <span className="ni-time">
+                <b>{cd.days}</b>d <b>{String(cd.hours).padStart(2, "0")}</b>h{" "}
+                <b>{String(cd.mins).padStart(2, "0")}</b>m
+                <span className="hidden sm:inline">
+                  {" "}
+                  <b>{String(cd.secs).padStart(2, "0")}</b>s
+                </span>
+              </span>
             ) : (
-              <div className="h-10 w-32 sm:h-12 sm:w-44" />
+              <span className="ni-time">&nbsp;</span>
             )}
           </div>
 
-        {/* profile chip + settings dropdown */}
+          {/* profile chip + settings dropdown */}
           <div
             ref={menuRef}
             className="settings-wrap"
@@ -180,22 +177,38 @@ export default function ProgressHeader({
           </div>
         </div>
 
-        {/* row 2: full-width progress bar */}
-        <div className="order-3 w-full min-w-0 sm:order-2 sm:w-auto sm:min-w-[160px] sm:flex-1">
-          <div className="mb-1 flex items-baseline justify-between text-xs font-bold uppercase tracking-wide sm:text-sm">
-            <span>
-              <span className="f-bangers text-base tracking-wider text-[color:var(--red)] sm:text-lg">{watchedMovies}</span> of {totalMovies} movies
-            </span>
-            {showShows && (
+        {/* row 2: the collection shelf — one spine per movie, coloured once read */}
+        <div className="order-3 flex w-full min-w-0 items-end gap-3 sm:order-2 sm:w-auto sm:flex-1">
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 flex items-baseline justify-between gap-2 text-xs font-bold sm:text-sm">
               <span>
-                side quest {watchedShows}/{totalShows}
+                <span className="f-anton text-lg text-[color:var(--red)]">{watchedMovies}</span> of {totalMovies}{" "}
+                issues read
               </span>
-            )}
+              {showShows && (
+                <span className="hidden sm:inline">
+                  stickers {watchedShows}/{totalShows}
+                </span>
+              )}
+            </div>
+            <div className="spine-shelf" role="img" aria-label={`${watchedMovies} of ${totalMovies} movies watched`}>
+              {spines.map((sp) => (
+                <i
+                  key={sp.id}
+                  title={sp.title}
+                  className={sp.read ? "read" : sp.id === upNext?.id ? "next" : ""}
+                  style={{ "--aura": sp.aura } as React.CSSProperties}
+                />
+              ))}
+            </div>
+            {pace && <div className="pace-note mt-1 text-[11px] sm:text-xs">{pace}</div>}
           </div>
-          <div className="progress-track">
-            <div className="progress-fill" style={{ width: `${pct}%` }} />
-          </div>
-          {pace && <div className="pace-note mt-1.5 text-[11px] sm:text-xs">{pace}</div>}
+          {upNext && (
+            <button className="continue-btn" onClick={continueReading} title={`Jump to ${upNext.title}`}>
+              <small>Continue</small>
+              <span>reading!</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

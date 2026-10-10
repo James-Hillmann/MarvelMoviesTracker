@@ -5,11 +5,12 @@ import { celebrate, phaseVictory } from "@/lib/confetti";
 import { Profile, profileById } from "@/lib/profiles";
 import { COUNTED_MOVIES, Entry, MOVIES, moviesInOrder, PHASE_BOSSES, PHASE_COLORS, PHASE_LABELS, SHOWS } from "@/lib/timeline";
 import { useProgress } from "@/lib/useProgress";
-import Board from "./Board";
+import ComicBook from "./ComicBook";
 import DetailModal from "./DetailModal";
 import ProfilePicker from "./ProfilePicker";
 import ProgressHeader from "./ProgressHeader";
 import SagaBackground from "./SagaBackground";
+import StickerAlbum from "./StickerAlbum";
 
 const PROFILE_STORAGE_KEY = "mcu-profile";
 
@@ -67,7 +68,7 @@ export default function TrackerApp() {
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);
-  const movieCols = isMobile ? 2 : 3;
+  const movieCols = isMobile ? 2 : 6;
 
   const movieOrder = useMemo(() => moviesInOrder(orderMode), [orderMode]);
 
@@ -89,7 +90,7 @@ export default function TrackerApp() {
     if (clearedPhase && phase !== undefined) {
       phaseVictory(PHASE_LABELS[phase].split("—")[0].trim(), boss.name, boss.quip, PHASE_COLORS[phase], boss.img);
     } else {
-      celebrate(entry.wm.aura);
+      celebrate(entry.wm.aura, document.querySelector(`[data-entry="${entry.id}"]`));
     }
   };
 
@@ -114,6 +115,8 @@ export default function TrackerApp() {
       <ProgressHeader
         watchedMovies={watchedMovies}
         totalMovies={COUNTED_MOVIES.length}
+        spines={movieOrder.filter((e) => e.id !== "doomsday").map((e) => ({ id: e.id, title: e.title, aura: e.wm.aura, read: Boolean(watched[e.id]) }))}
+        upNext={movieOrder.find((e) => e.id === upNextMovie) ?? null}
         watchedShows={watchedShows}
         totalShows={SHOWS.length}
         orderMode={orderMode}
@@ -130,14 +133,14 @@ export default function TrackerApp() {
       <main className="mx-auto max-w-6xl px-4 pb-24 pt-8">
         <div className="flex flex-col gap-12 lg:flex-row lg:gap-8">
           {/* movies — the main quest */}
-          <section className={showShows ? "min-w-0 lg:flex-[3]" : "mx-auto w-full max-w-3xl min-w-0"}>
+          <section className={showShows ? "min-w-0 lg:flex-[3]" : "mx-auto w-full max-w-4xl min-w-0"}>
             <div className="mb-8 flex items-center justify-between gap-3">
-              <h2 className="section-title">The Movies</h2>
+              <h2 className="section-title">The Collection</h2>
               <span className="section-meta">
-                {orderMode === "release" ? "in release order" : "in-universe timeline"}
+                {orderMode === "release" ? "six issues, read in release order" : "the omnibus, in-universe order"}
               </span>
             </div>
-            <Board
+            <ComicBook
               entries={movieOrder}
               cols={movieCols}
               watched={watched}
@@ -145,8 +148,7 @@ export default function TrackerApp() {
               showPhases={orderMode === "release"}
               finaleId="doomsday"
               doomGlow={doomGlow}
-              layoutKey={`movies-${orderMode}-${movieCols}`}
-              wordmarkBase={isMobile ? 1.25 : 1.55}
+              wordmarkBase={isMobile ? 1.2 : 1.5}
               onSelect={setSelected}
               onQuickToggle={handleToggle}
             />
@@ -156,22 +158,20 @@ export default function TrackerApp() {
           {showShows && (
           <aside className="min-w-0 lg:flex-[2] lg:border-l-[3px] lg:border-dashed lg:border-[color:var(--ink)] lg:pl-8">
             <div className="mb-5 flex items-center justify-between gap-3">
-              <h2 className="section-title">Side Quest: TV</h2>
+              <h2 className="section-title">Sticker Album: TV</h2>
               <span className="section-meta">
                 {watchedShows}/{SHOWS.length}
               </span>
             </div>
             <p className="note-box mb-10">
-              The shows don&apos;t count toward the Doomsday clock — knock them out whenever.
-              The first six are the Netflix era: semi-canon, skippable, but great.
+              The shows don&apos;t count toward the Doomsday clock. Watch one and its sticker goes in.
+              The Netflix six are bonus stickers: semi-canon, skippable, but great.
             </p>
-            <Board
+            <StickerAlbum
               entries={SHOWS}
-              cols={2}
               watched={watched}
               upNextId={upNextShow}
-              layoutKey="shows"
-              wordmarkBase={isMobile ? 1.05 : 1.25}
+              wordmarkBase={isMobile ? 1.0 : 1.1}
               onSelect={setSelected}
               onQuickToggle={handleToggle}
             />
