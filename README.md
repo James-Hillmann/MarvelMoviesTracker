@@ -2,7 +2,7 @@
 
 James & Deniz's MCU watch-through tracker — every Marvel movie before **Avengers: Doomsday** (Dec 18, 2026).
 
-A poster-style snake board: click a title for posters, reviews and where to watch; mark it watched and the arrow trail turns green behind you. Movies are the main quest; the TV shows are a side quest that doesn't count toward the Doomsday clock.
+A mission-control HUD: a hex **sector map** of every film, a **current target** panel for whatever is next, and a **mission log** ledger grouped into sectors (phases) with the boss you take down by clearing each one. Click a title for its dossier (posters, reviews, where to watch); mark it cleared and the hex lights up in its sector colour. Movies are the primary objectives; the TV shows are a side channel that doesn't count toward the Doomsday clock.
 
 On first visit you pick a profile — **James & Deniz** or **Kate** — and each crew gets its own shared trail (add more in `lib/profiles.ts`). The settings menu under the profile chip switches between release/chronological order and shows/hides the TV column; profile and settings are remembered per device.
 
@@ -41,6 +41,6 @@ Then in the Vercel dashboard:
 
 - `lib/timeline.ts` — every movie/show, the watch orders, and each title's wordmark style (font, gradient, aura color). Add or restyle titles here.
 - `lib/timeline.ts` → `DOOMSDAY_DATE` — the countdown target if the release date moves.
-- `components/Board.tsx` + `ArrowPath.tsx` — the snake grid and the arrow trail.
+- `components/HexMap.tsx`, `TargetPanel.tsx`, `MissionLog.tsx` — the sector map, the current-target panel and the sector ledger.
 - `app/api/progress` — shared watched-state (Redis, falls back to a local file).
 - `app/api/title/[id]` — TMDB proxy (key stays server-side, cached daily).
