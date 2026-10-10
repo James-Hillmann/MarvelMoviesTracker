@@ -96,3 +96,15 @@ export async function setWatched(profile: string, id: string, watched: boolean):
   await writeFileMap(profile, map);
   return map;
 }
+
+/** Marks a title watched, keeping the original date if it was already watched. */
+export async function markWatched(profile: string, id: string): Promise<void> {
+  if (storageKind() === "redis") {
+    await redisCmd(["HSETNX", redisKey(profile), id, String(Date.now())]);
+    return;
+  }
+  const map = await readFileMap(profile);
+  if (map[id]) return;
+  map[id] = Date.now();
+  await writeFileMap(profile, map);
+}

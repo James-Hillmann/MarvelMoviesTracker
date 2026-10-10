@@ -953,6 +953,28 @@ body {
   box-shadow: 0 0 26px rgba(63, 143, 224, 0.55);
 }
 
+.btn-together {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-bebas), sans-serif;
+  letter-spacing: 0.14em;
+  font-size: 1rem;
+  padding: 9px 20px 7px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3a1670, #6d28d9);
+  border: 1px solid #a78bfa;
+  color: #ede4ff;
+  box-shadow: 0 0 18px rgba(139, 92, 246, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-together:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 26px rgba(139, 92, 246, 0.55);
+}
+
 .btn-watched {
   display: inline-flex;
   align-items: center;

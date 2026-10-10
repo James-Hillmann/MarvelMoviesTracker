@@ -188,6 +188,7 @@ export default function TrackerApp() {
         <DetailModal
           entry={selected}
           watched={Boolean(watched[selected.id])}
+          profileId={profile.id}
           onToggle={handleToggle}
           onClose={() => setSelected(null)}
         />

@@ -37,10 +37,19 @@ Then in the Vercel dashboard:
 2. **Settings → Environment Variables** → add `TMDB_API_KEY`
 3. Redeploy. The site URL is your shared board — bookmark it on both phones.
 
+## Watch together
+
+If you watch with the [Watch Together](https://github.com/James-Hillmann/watch-together) browser extension, open a movie's card and press **👥 Watch together**. It opens Disney+ with a hand-off the extension catches; start the party there as usual and send the link. When the movie reaches the credits, the extension checks it off here for everyone in the party, and the board picks it up on its next refresh.
+
+- Whoever started the party gets it checked off on the profile they had open. A friend on a different profile (say Kate) gets it on theirs too once they've used the button on their own device at least once.
+- Movies only: a show party would count as finished after one episode.
+- The extension calls `POST /api/watch-together`, which can only mark titles watched, never unwatch, and keeps the original date if it was already watched.
+
 ## Where things live
 
 - `lib/timeline.ts` — every movie/show, the watch orders, and each title's wordmark style (font, gradient, aura color). Add or restyle titles here.
 - `lib/timeline.ts` → `DOOMSDAY_DATE` — the countdown target if the release date moves.
 - `components/Board.tsx` + `ArrowPath.tsx` — the snake grid and the arrow trail.
 - `app/api/progress` — shared watched-state (Redis, falls back to a local file).
+- `app/api/watch-together` + `lib/watchTogether.ts` — the Watch Together hand-off and check-off.
 - `app/api/title/[id]` — TMDB proxy (key stays server-side, cached daily).
