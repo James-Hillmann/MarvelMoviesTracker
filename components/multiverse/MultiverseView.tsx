@@ -2,7 +2,7 @@
 
 import { Canvas } from "@react-three/fiber";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Entry, PHASE_COLORS, PHASE_LABELS } from "@/lib/timeline";
+import { Entry, PHASE_BOSSES, PHASE_COLORS, PHASE_LABELS } from "@/lib/timeline";
 import Wordmark from "../Wordmark";
 import Scene, { NavState } from "./Scene";
 
@@ -39,7 +39,7 @@ export default function MultiverseView({
   onSelect,
   onQuickToggle,
 }: Props) {
-  const nav = useRef<NavState>({ target: 0, focus: 0, map: false, hovered: null });
+  const nav = useRef<NavState>({ target: 0, focus: 0, map: false, hovered: null, warpAt: -1 });
   const [focusIdx, setFocusIdx] = useState(0);
   const [map, setMap] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -100,6 +100,50 @@ export default function MultiverseView({
     }, 350);
     return () => clearTimeout(t);
   }, [upNextId, entries, fly]);
+
+  // check-off choreography: shockwave (in the scene), then a warp jump to the
+  // next unwatched world — or, if that cleared a phase, a letterboxed boss snap
+  const watchedRef = useRef(watched);
+  watchedRef.current = watched;
+  const [snap, setSnap] = useState<{ phase: number; key: number } | null>(null);
+  const snapNow = (entry: Entry, w: Record<string, number>) =>
+    showPhases &&
+    entry.phase !== undefined &&
+    Boolean(PHASE_BOSSES[entry.phase]) &&
+    entries.filter((e) => e.phase === entry.phase).every((e) => w[e.id]);
+  useEffect(() => {
+    const onToggle = (ev: Event) => {
+      const { id, nowWatched } = (ev as CustomEvent<{ id: string; nowWatched: boolean }>).detail;
+      if (!nowWatched) return;
+      const idx = entries.findIndex((e) => e.id === id);
+      if (idx < 0) return;
+      const entry = entries[idx];
+      const w = { ...watchedRef.current, [id]: 1 };
+      if (showPhases && entry.phase !== undefined && PHASE_BOSSES[entry.phase]) {
+        const cleared = entries.filter((e) => e.phase === entry.phase).every((e) => w[e.id]);
+        if (cleared) setSnap({ phase: entry.phase, key: Date.now() });
+      }
+      let next = entries.findIndex((e, i) => i > idx && !w[e.id]);
+      if (next < 0) next = entries.findIndex((e) => !w[e.id]);
+      if (next < 0) return;
+      // after a boss snap, let the dust settle before jumping to the next sector
+      setTimeout(
+        () => {
+          nav.current.warpAt = performance.now();
+          fly(next);
+        },
+        snapNow(entry, w) ? 4400 : 650,
+      );
+    };
+    window.addEventListener("mv:toggle", onToggle);
+    return () => window.removeEventListener("mv:toggle", onToggle);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entries, showPhases, fly]);
+  useEffect(() => {
+    if (!snap) return;
+    const t = setTimeout(() => setSnap(null), 4600);
+    return () => clearTimeout(t);
+  }, [snap]);
 
   // keyboard travel
   useEffect(() => {
@@ -241,12 +285,25 @@ export default function MultiverseView({
               <button className="mv-btn" onClick={() => onSelect(focused)}>
                 Details
               </button>
-              <button className={`btn-watched ${focusedWatched ? "is-watched" : ""}`} onClick={() => onQuickToggle(focused)}>
-                {focusedWatched ? "↺ Unwatch" : "✓ Watched"}
+              <button className={`mv-claim ${focusedWatched ? "done" : ""}`} onClick={() => onQuickToggle(focused)}>
+                {focusedWatched ? "↺ Reopen" : "◉ Explored"}
               </button>
               <button className="mv-nav" onClick={() => fly(focusIdx + 1)} disabled={focusIdx === n - 1} aria-label="Next">
                 ›
               </button>
+            </div>
+          </div>
+        )}
+
+        {snap && (
+          <div key={snap.key} className="mv-snap" style={{ "--phase-color": PHASE_COLORS[snap.phase] } as React.CSSProperties}>
+            <div className="mv-snap-bar top" />
+            <div className="mv-snap-bar bottom">
+              <div className="mv-snap-text">
+                <span className="mv-snap-kicker">{PHASE_LABELS[snap.phase].split("—")[0]} · threat erased</span>
+                <span className="mv-snap-boss">{PHASE_BOSSES[snap.phase].name}</span>
+                <span className="mv-snap-quip">“{PHASE_BOSSES[snap.phase].quip}”</span>
+              </div>
             </div>
           </div>
         )}

@@ -6,6 +6,9 @@ import { Bloom, EffectComposer, Noise, Vignette } from "@react-three/postprocess
 import { MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
 import {
   AdditiveBlending,
+  BufferGeometry,
+  Float32BufferAttribute,
+  LineBasicMaterial,
   CanvasTexture,
   CatmullRomCurve3,
   Color,
@@ -33,6 +36,16 @@ export interface NavState {
   map: boolean;
   /** node under the pointer (map mode labels) */
   hovered: number | null;
+  /** performance.now() when the last warp jump started (-1 = none) */
+  warpAt: number;
+}
+
+/** 0..1..0 envelope of the current warp jump */
+export function warpAmount(nav: NavState) {
+  if (nav.warpAt < 0) return 0;
+  const age = (performance.now() - nav.warpAt) / 1000;
+  if (age > 1.6) return 0;
+  return age < 0.35 ? age / 0.35 : Math.max(0, 1 - (age - 0.35) / 1.25);
 }
 
 export interface SceneProps {
@@ -128,7 +141,14 @@ function CameraRig({
       desired.current.y += Math.cos(t * 0.29) * 0.25;
     }
 
-    const ck = Math.min(1, dt * (n.map ? 1.6 : 2.6));
+    const w = warpAmount(n);
+    const cam = camera as import("three").PerspectiveCamera;
+    const fov = 55 + w * 38;
+    if (Math.abs(cam.fov - fov) > 0.01) {
+      cam.fov = fov;
+      cam.updateProjectionMatrix();
+    }
+    const ck = Math.min(1, dt * (n.map ? 1.6 : 2.6 + w * 4));
     camera.position.lerp(desired.current, ck);
     look.current.lerp(desiredLook.current, ck);
     camera.lookAt(look.current);
@@ -154,6 +174,46 @@ function SpaceDust({ lowPower }: { lowPower: boolean }) {
     <group ref={ref}>
       <Stars radius={140} depth={90} count={lowPower ? 2500 : 7000} factor={5} saturation={0.4} fade speed={0.6} />
       <Sparkles count={lowPower ? 40 : 120} scale={[36, 22, 46]} size={2.2} speed={0.35} opacity={0.55} color="#ffe6b8" />
+    </group>
+  );
+}
+
+/** hyperspace streaks that only exist mid-warp */
+function WarpStreaks({ nav }: { nav: MutableRefObject<NavState> }) {
+  const ref = useRef<Group>(null);
+  const mat = useRef<LineBasicMaterial>(null);
+  const { camera } = useThree();
+  const geom = useMemo(() => {
+    const rnd = mulberry32(99);
+    const arr: number[] = [];
+    for (let i = 0; i < 420; i++) {
+      const a = rnd() * Math.PI * 2;
+      const r = 2.5 + rnd() * 14;
+      const z = -rnd() * 90;
+      const x = Math.cos(a) * r;
+      const y = Math.sin(a) * r;
+      arr.push(x, y, z, x, y, z - 1);
+    }
+    const g = new BufferGeometry();
+    g.setAttribute("position", new Float32BufferAttribute(arr, 3));
+    return g;
+  }, []);
+  useFrame(() => {
+    const g = ref.current;
+    if (!g) return;
+    const w = warpAmount(nav.current);
+    g.visible = w > 0.01;
+    if (!g.visible) return;
+    g.position.copy(camera.position);
+    g.quaternion.copy(camera.quaternion);
+    g.scale.set(1, 1, 1 + w * 14);
+    if (mat.current) mat.current.opacity = w * 0.85;
+  });
+  return (
+    <group ref={ref} visible={false}>
+      <lineSegments geometry={geom}>
+        <lineBasicMaterial ref={mat} color={new Color("#d8ffe4").multiplyScalar(2)} transparent opacity={0} toneMapped={false} depthWrite={false} blending={AdditiveBlending} />
+      </lineSegments>
     </group>
   );
 }
@@ -347,7 +407,9 @@ function World({
     uniforms.uIntensity.value += (base + (hover ? 0.7 : 0) - uniforms.uIntensity.value) * Math.min(1, dt * 6);
 
     if (beacon.current) {
-      (beacon.current.material as MeshBasicMaterial).opacity = 0.35 + Math.sin(t * 2.2) * 0.15;
+      // fades as you arrive so it never slabs across the camera
+      const near = Math.max(0, Math.min(1, (Math.abs(index - nav.current.focus) - 0.8) / 1.5));
+      (beacon.current.material as MeshBasicMaterial).opacity = (0.22 + Math.sin(t * 2.2) * 0.1) * near;
     }
 
     if (shock.current) {
@@ -453,7 +515,7 @@ function World({
       {/* up-next beacon */}
       {upNext && (
         <mesh ref={beacon} position={[0, 14, 0]}>
-          <cylinderGeometry args={[0.08, 0.5, 26, 16, 1, true]} />
+          <cylinderGeometry args={[0.02, 0.16, 26, 12, 1, true]} />
           <meshBasicMaterial
             color={new Color("#e8b64c").multiplyScalar(2)}
             transparent
@@ -474,12 +536,12 @@ function World({
         style={{ pointerEvents: "none" }}
       >
         <div ref={label} className={`mv-label ${watched ? "watched" : ""} ${upNext ? "upnext" : ""}`} style={{ opacity: 0 }}>
-          {upNext && <span className="upnext-badge">Up Next</span>}
+          {upNext && <span className="mv-next">◆ Next destination</span>}
           {entry.sub && <span className="sub-label">{entry.sub}</span>}
           <Wordmark entry={entry} base={isFinale ? 2.2 : 1.6} />
           <span className="mv-year">
             {entry.year}
-            {watched && <span className="mv-check"> · ✓ watched</span>}
+            {watched && <span className="mv-check"> · explored</span>}
           </span>
         </div>
       </Html>
@@ -491,22 +553,92 @@ function World({
 /* phase gates + looming bosses                                        */
 /* ------------------------------------------------------------------ */
 
+const dissolveVert = /* glsl */ `
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+
+/** "I am inevitable": the boss render crumbles to ash from the edges in */
+const dissolveFrag = /* glsl */ `
+uniform sampler2D uMap;
+uniform vec3 uTint;
+uniform vec3 uEdge;
+uniform float uOpacity;
+uniform float uDissolve;
+uniform float uTime;
+varying vec2 vUv;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+  vec2 i = floor(p); vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y);
+}
+void main() {
+  // ash drifts up-and-right as the dissolve advances
+  vec2 uv = vUv;
+  float n = noise(uv * 9.0) * 0.6 + noise(uv * 31.0) * 0.4;
+  // bias so it eats in from the right edge, like the snap
+  float field = n * 0.75 + (1.0 - uv.x) * 0.25;
+  vec4 tex = texture2D(uMap, uv);
+  if (tex.a < 0.05) discard;
+  float cut = uDissolve * 1.1;
+  if (field < cut) discard;
+  float edge = 1.0 - smoothstep(0.0, 0.06, field - cut);
+  vec3 col = tex.rgb * uTint + uEdge * edge * step(0.001, uDissolve) * 3.0;
+  gl_FragColor = vec4(col, tex.a * uOpacity * (1.0 - edge * 0.3) + edge * step(0.001, uDissolve));
+}`;
+
 function BossSpecter({ img, pos, color, defeated }: { img: string; pos: Vector3; color: string; defeated: boolean }) {
   const tex = useTexture(img);
-  const mat = useRef<MeshBasicMaterial>(null);
   const aspect = tex.image ? (tex.image as HTMLImageElement).width / (tex.image as HTMLImageElement).height : 0.6;
   const h = 26;
-  const tint = useMemo(() => (defeated ? new Color("#4a4a52") : new Color(color).lerp(new Color("#ffffff"), 0.35)), [color, defeated]);
-  useFrame((state) => {
-    if (!mat.current) return;
+  const uniforms = useMemo(
+    () => ({
+      uMap: { value: tex },
+      uTint: { value: new Color(color).lerp(new Color("#ffffff"), 0.35) },
+      uEdge: { value: new Color(color).lerp(new Color("#ffffff"), 0.4) },
+      uOpacity: { value: 0.3 },
+      uDissolve: { value: defeated ? 0.72 : 0 },
+      uTime: { value: 0 },
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tex],
+  );
+  // snap starts when the phase flips to defeated while we're watching
+  const snapAt = useRef(-1);
+  const prev = useRef(defeated);
+  useEffect(() => {
+    if (defeated && !prev.current) snapAt.current = performance.now();
+    if (!defeated) snapAt.current = -1;
+    prev.current = defeated;
+  }, [defeated]);
+  const grey = useMemo(() => new Color("#5a5a64"), []);
+  const live = useMemo(() => new Color(color).lerp(new Color("#ffffff"), 0.35), [color]);
+  useFrame((state, dt) => {
     const t = state.clock.elapsedTime;
-    mat.current.opacity = defeated ? 0.13 : 0.3 + Math.sin(t * 0.8) * 0.06;
+    uniforms.uTime.value = t;
+    let target: number;
+    if (snapAt.current > 0) {
+      const age = (performance.now() - snapAt.current) / 1000;
+      target = Math.min(0.72, (age / 3.2) * 0.72);
+      uniforms.uDissolve.value = target;
+      uniforms.uOpacity.value = 0.55 - Math.min(0.4, age * 0.12);
+      uniforms.uTint.value.copy(live).lerp(grey, Math.min(1, age / 3));
+      if (age > 3.4) snapAt.current = -1;
+      return;
+    }
+    target = defeated ? 0.72 : 0;
+    uniforms.uDissolve.value += (target - uniforms.uDissolve.value) * Math.min(1, dt * 2);
+    uniforms.uOpacity.value = defeated ? 0.16 : 0.3 + Math.sin(t * 0.8) * 0.06;
+    uniforms.uTint.value.lerp(defeated ? grey : live, Math.min(1, dt * 2));
   });
   return (
     <Billboard position={pos}>
       <mesh>
         <planeGeometry args={[h * aspect, h]} />
-        <meshBasicMaterial ref={mat} map={tex} color={tint} transparent depthWrite={false} fog={false} toneMapped={false} />
+        <shaderMaterial vertexShader={dissolveVert} fragmentShader={dissolveFrag} uniforms={uniforms} transparent depthWrite={false} toneMapped={false} />
       </mesh>
     </Billboard>
   );
@@ -764,6 +896,7 @@ export default function Scene({ entries, watched, upNextId, showPhases, finaleId
       <ambientLight intensity={0.25} />
       <directionalLight position={[10, 20, 10]} intensity={0.8} />
       <SpaceDust lowPower={lowPower} />
+      <WarpStreaks nav={nav} />
       <Nebulae clouds={clouds} />
 
       {layout.nodes.slice(0, -1).map((n, i) => (

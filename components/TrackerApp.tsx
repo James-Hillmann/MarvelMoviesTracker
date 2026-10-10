@@ -8,6 +8,8 @@ import { COUNTED_MOVIES, Entry, MOVIES, moviesInOrder, PHASE_BOSSES, PHASE_COLOR
 import { useProgress } from "@/lib/useProgress";
 import Board from "./Board";
 import DetailModal from "./DetailModal";
+import Dossier from "./multiverse/Dossier";
+import ShowMoons from "./multiverse/ShowMoons";
 import ProfilePicker from "./ProfilePicker";
 import ProgressHeader from "./ProgressHeader";
 import SagaBackground from "./SagaBackground";
@@ -121,6 +123,11 @@ export default function TrackerApp() {
 
   const handleToggle = async (entry: Entry) => {
     const nowWatched = await toggle(entry.id);
+    if (viewMode === "multiverse") {
+      // the 3D scene stages its own shockwave / warp / boss-snap
+      window.dispatchEvent(new CustomEvent("mv:toggle", { detail: { id: entry.id, nowWatched } }));
+      return;
+    }
     if (!nowWatched) return;
     // did this watch clear the whole phase? then it's a boss kill, not a confetti pop
     const phase = entry.phase;
@@ -201,15 +208,12 @@ export default function TrackerApp() {
                     <p className="mb-6 text-xs leading-relaxed text-white/40">
                       The shows don&apos;t count toward the Doomsday clock — knock them out whenever.
                     </p>
-                    <Board
-                      entries={SHOWS}
-                      cols={2}
+                    <ShowMoons
+                      shows={SHOWS}
                       watched={watched}
                       upNextId={upNextShow}
-                      layoutKey="shows-drawer"
-                      wordmarkBase={1.0}
                       onSelect={setSelected}
-                      onQuickToggle={handleToggle}
+                      onToggle={handleToggle}
                     />
                   </aside>
                 </div>
@@ -276,7 +280,15 @@ export default function TrackerApp() {
       </main>
       )}
 
-      {selected && (
+      {selected && viewMode === "multiverse" && (
+        <Dossier
+          entry={selected}
+          watched={Boolean(watched[selected.id])}
+          onToggle={handleToggle}
+          onClose={() => setSelected(null)}
+        />
+      )}
+      {selected && viewMode === "classic" && (
         <DetailModal
           entry={selected}
           watched={Boolean(watched[selected.id])}
