@@ -14,6 +14,8 @@ interface Props {
   showShows: boolean;
   onShowShowsChange: (show: boolean) => void;
   profile: Profile;
+  /** summed best quiz scores, once any quiz has been taken */
+  triviaScore?: { score: number; total: number };
   onSwitchProfile: () => void;
 }
 
@@ -43,6 +45,7 @@ export default function ProgressHeader({
   showShows,
   onShowShowsChange,
   profile,
+  triviaScore,
   onSwitchProfile,
 }: Props) {
   const cd = useCountdown(DOOMSDAY_DATE);
@@ -173,6 +176,11 @@ export default function ProgressHeader({
             <span>
               <span className="text-white/95">{watchedMovies}</span> / {totalMovies} movies
             </span>
+            {triviaScore && (
+              <span title="Best pop-quiz scores, summed">
+                trivia <span className="text-white/95">{triviaScore.score}</span>/{triviaScore.total}
+              </span>
+            )}
             {showShows && (
               <span>
                 side quest {watchedShows}/{totalShows}

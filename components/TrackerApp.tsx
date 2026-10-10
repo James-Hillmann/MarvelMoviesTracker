@@ -4,11 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import { celebrate, phaseVictory } from "@/lib/confetti";
 import { Profile, profileById } from "@/lib/profiles";
 import { COUNTED_MOVIES, Entry, MOVIES, moviesInOrder, PHASE_BOSSES, PHASE_COLORS, PHASE_LABELS, SHOWS } from "@/lib/timeline";
+import { triviaFor } from "@/lib/trivia";
 import { useProgress } from "@/lib/useProgress";
+import { useTrivia } from "@/lib/useTrivia";
 import Board from "./Board";
 import DetailModal from "./DetailModal";
 import ProfilePicker from "./ProfilePicker";
 import ProgressHeader from "./ProgressHeader";
+import QuizModal from "./QuizModal";
+import QuizPrompt from "./QuizPrompt";
 import SagaBackground from "./SagaBackground";
 
 const PROFILE_STORAGE_KEY = "mcu-profile";
@@ -31,6 +35,9 @@ export default function TrackerApp() {
   const [orderMode, setOrderModeState] = useState<"release" | "chrono">("release");
   const [showShows, setShowShowsState] = useState(false);
   const [selected, setSelected] = useState<Entry | null>(null);
+  const { results: trivia, submit: submitQuiz } = useTrivia(profile?.id ?? null);
+  const [quizEntry, setQuizEntry] = useState<Entry | null>(null);
+  const [quizOffer, setQuizOffer] = useState<Entry | null>(null);
 
   // per-device display settings
   useEffect(() => {
@@ -75,12 +82,20 @@ export default function TrackerApp() {
   const watchedShows = SHOWS.filter((e) => watched[e.id]).length;
   const doomGlow = COUNTED_MOVIES.length ? watchedMovies / COUNTED_MOVIES.length : 0;
 
+  const triviaScore = Object.values(trivia).reduce(
+    (acc, r) => ({ score: acc.score + r.best, total: acc.total + r.total }),
+    { score: 0, total: 0 },
+  );
+
   const upNextMovie = movieOrder.find((e) => !watched[e.id])?.id ?? null;
   const upNextShow = SHOWS.find((e) => !watched[e.id])?.id ?? null;
 
   const handleToggle = async (entry: Entry) => {
     const nowWatched = await toggle(entry.id);
-    if (!nowWatched) return;
+    if (!nowWatched) {
+      setQuizOffer((o) => (o?.id === entry.id ? null : o));
+      return;
+    }
     // did this watch clear the whole phase? then it's a boss kill, not a confetti pop
     const phase = entry.phase;
     const boss = phase !== undefined ? PHASE_BOSSES[phase] : undefined;
@@ -91,6 +106,16 @@ export default function TrackerApp() {
     } else {
       celebrate(entry.wm.aura);
     }
+    // first time through? offer the pop quiz once the celebration settles
+    if (triviaFor(entry.id) && !trivia[entry.id]) {
+      setTimeout(() => setQuizOffer(entry), clearedPhase ? 3000 : 900);
+    }
+  };
+
+  const openQuiz = (entry: Entry) => {
+    setQuizOffer(null);
+    setSelected(null);
+    setQuizEntry(entry);
   };
 
   // wait for localStorage before rendering anything (avoids a picker flash)
@@ -121,6 +146,7 @@ export default function TrackerApp() {
         showShows={showShows}
         onShowShowsChange={setShowShows}
         profile={profile}
+        triviaScore={triviaScore.total ? triviaScore : undefined}
         onSwitchProfile={() => {
           localStorage.removeItem(PROFILE_STORAGE_KEY);
           setProfileId("");
@@ -188,8 +214,25 @@ export default function TrackerApp() {
         <DetailModal
           entry={selected}
           watched={Boolean(watched[selected.id])}
+          quiz={triviaFor(selected.id) ? { result: trivia[selected.id] } : undefined}
+          onQuiz={() => openQuiz(selected)}
           onToggle={handleToggle}
           onClose={() => setSelected(null)}
+        />
+      )}
+
+      {quizOffer && !quizEntry && (
+        <QuizPrompt entry={quizOffer} onStart={() => openQuiz(quizOffer)} onDismiss={() => setQuizOffer(null)} />
+      )}
+
+      {quizEntry && (
+        <QuizModal
+          key={quizEntry.id}
+          entry={quizEntry}
+          questions={triviaFor(quizEntry.id) ?? []}
+          previous={trivia[quizEntry.id]}
+          onSubmit={(answers) => submitQuiz(quizEntry.id, answers)}
+          onClose={() => setQuizEntry(null)}
         />
       )}
     </div>

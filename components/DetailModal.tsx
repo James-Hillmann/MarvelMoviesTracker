@@ -3,12 +3,16 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Entry } from "@/lib/timeline";
+import { QuizResult } from "@/lib/trivia";
 import { TitleInfo } from "@/lib/tmdb";
 import Wordmark from "./Wordmark";
 
 interface Props {
   entry: Entry;
   watched: boolean;
+  /** present when this title has a pop quiz */
+  quiz?: { result?: QuizResult };
+  onQuiz: () => void;
   onToggle: (entry: Entry) => void;
   onClose: () => void;
 }
@@ -21,7 +25,7 @@ function searchUrl(entry: Entry) {
   };
 }
 
-export default function DetailModal({ entry, watched, onToggle, onClose }: Props) {
+export default function DetailModal({ entry, watched, quiz, onQuiz, onToggle, onClose }: Props) {
   const [info, setInfo] = useState<TitleInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -164,6 +168,31 @@ export default function DetailModal({ entry, watched, onToggle, onClose }: Props
             )}
           </div>
         </div>
+
+        {quiz && (
+          <div className="quiz-row">
+            <span className="quiz-kicker">Pop quiz</span>
+            {!watched ? (
+              <span className="text-xs text-white/45">🔒 Unlocks once you&apos;ve watched it — no spoilers.</span>
+            ) : quiz.result ? (
+              <>
+                <span className="text-sm text-white/75">
+                  Best <b className="text-white">{quiz.result.best}/{quiz.result.total}</b>
+                </span>
+                <button className="quiz-link ml-auto" onClick={onQuiz}>
+                  ↺ Retake
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="text-xs text-white/55">3 questions. Prove you were paying attention.</span>
+                <button className="quiz-link ml-auto" onClick={onQuiz}>
+                  Take the quiz →
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-3 border-t border-white/10 px-5 py-4">
           <a className="btn-disney" href={links.disney} target="_blank" rel="noopener noreferrer">

@@ -27,7 +27,7 @@ export function storageKind(): "redis" | "file" {
   return REDIS_URL && REDIS_TOKEN ? "redis" : "file";
 }
 
-async function redisCmd(cmd: unknown[]): Promise<unknown> {
+export async function redisCmd(cmd: unknown[]): Promise<unknown> {
   const res = await fetch(REDIS_URL as string, {
     method: "POST",
     headers: {
