@@ -9,7 +9,7 @@ import Wordmark from "./Wordmark";
 interface Props {
   entry: Entry;
   watched: boolean;
-  onToggle: (entry: Entry) => void;
+  onToggle: (entry: Entry, origin?: Element | null) => void;
   onClose: () => void;
 }
 
@@ -179,7 +179,7 @@ export default function DetailModal({ entry, watched, onToggle, onClose }: Props
           </a>
           <button
             className={`btn-watched ml-auto ${watched ? "is-watched" : ""}`}
-            onClick={() => onToggle(entry)}
+            onClick={(ev) => onToggle(entry, ev.currentTarget)}
           >
             {watched ? "↺ Unwatch" : "✓ Mark watched"}
           </button>

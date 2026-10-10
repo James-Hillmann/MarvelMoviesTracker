@@ -83,7 +83,7 @@ interface BoardProps {
   layoutKey: string;
   wordmarkBase?: number;
   onSelect: (entry: Entry) => void;
-  onQuickToggle: (entry: Entry) => void;
+  onQuickToggle: (entry: Entry, origin?: Element | null) => void;
 }
 
 export default function Board({
@@ -133,6 +133,7 @@ export default function Board({
       <div
         key={e.id}
         ref={registerCell(e.id)}
+        data-entry-id={e.id}
         className={`cell group ${isWatched ? "watched" : ""} ${isUpNext ? "upnext" : ""} ${isConquered ? "conquered" : ""}`}
         style={{ "--aura": e.wm.aura, ...gridStyle } as React.CSSProperties}
         onClick={() => onSelect(e)}
@@ -160,7 +161,7 @@ export default function Board({
           title={isWatched ? "Mark as unwatched" : "Mark as watched"}
           onClick={(ev) => {
             ev.stopPropagation();
-            onQuickToggle(e);
+            onQuickToggle(e, ev.currentTarget.closest(".cell"));
           }}
         >
           {isWatched ? "↺" : "✓"}
