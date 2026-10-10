@@ -2,9 +2,13 @@
 
 import { RefObject, useEffect, useState } from "react";
 
-interface Point {
+interface Box {
+  /** center */
   x: number;
   y: number;
+  /** half extents */
+  hw: number;
+  hh: number;
 }
 
 interface Props {
@@ -26,7 +30,7 @@ interface Props {
  * pathLength=1 so the draw-in animation needs no length measuring.
  */
 export default function ArrowPath({ containerRef, cellRefs, order, watched, layoutKey }: Props) {
-  const [points, setPoints] = useState<Record<string, Point>>({});
+  const [points, setPoints] = useState<Record<string, Box>>({});
 
   useEffect(() => {
     const container = containerRef.current;
@@ -34,12 +38,17 @@ export default function ArrowPath({ containerRef, cellRefs, order, watched, layo
 
     const measure = () => {
       const cRect = container.getBoundingClientRect();
-      const next: Record<string, Point> = {};
+      const next: Record<string, Box> = {};
       for (const id of order) {
         const el = cellRefs.current?.get(id);
         if (!el) continue;
         const r = el.getBoundingClientRect();
-        next[id] = { x: r.left + r.width / 2 - cRect.left, y: r.top + r.height / 2 - cRect.top };
+        next[id] = {
+          x: r.left + r.width / 2 - cRect.left,
+          y: r.top + r.height / 2 - cRect.top,
+          hw: r.width / 2,
+          hh: r.height / 2,
+        };
       }
       setPoints(next);
     };
@@ -60,15 +69,17 @@ export default function ArrowPath({ containerRef, cellRefs, order, watched, layo
     if (!a || !b) continue;
     const done = Boolean(watched[order[i]]);
     let d: string;
+    const gap = 7;
     if (Math.abs(a.y - b.y) < 6) {
-      // same row — straight arrow, trimmed clear of the wordmarks
+      // same row — straight arrow through the gutter between the two posters
       const dir = Math.sign(b.x - a.x) || 1;
-      const trim = Math.min(Math.abs(b.x - a.x) * 0.32, 70);
-      d = `M ${a.x + trim * dir} ${a.y} L ${b.x - trim * dir} ${b.y}`;
+      d = `M ${a.x + (a.hw + gap) * dir} ${a.y} L ${b.x - (b.hw + gap) * dir} ${b.y}`;
     } else {
-      // row wrap — S-curve from below the cell to above the next
-      const drop = 16;
-      d = `M ${a.x} ${a.y + drop} C ${a.x} ${a.y + drop + 26}, ${b.x} ${b.y - drop - 26}, ${b.x} ${b.y - drop}`;
+      // row wrap — S-curve from under one poster to the top of the next
+      const y1 = a.y + a.hh + gap;
+      const y2 = b.y - b.hh - gap;
+      const bend = Math.max(18, (y2 - y1) * 0.6);
+      d = `M ${a.x} ${y1} C ${a.x} ${y1 + bend}, ${b.x} ${y2 - bend}, ${b.x} ${y2}`;
     }
     segs.push({ d, done, key: `${order[i]}->${order[i + 1]}:${done}` });
   }

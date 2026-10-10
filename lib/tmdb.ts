@@ -25,6 +25,11 @@ export interface TitleInfo {
   cast?: { name: string; character: string; profile: string | null }[];
 }
 
+export interface Artwork {
+  poster: string | null;
+  backdrop: string | null;
+}
+
 function apiKey(): string | undefined {
   return process.env.TMDB_API_KEY;
 }

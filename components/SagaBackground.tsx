@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 
 /**
  * "Saga Eras" background — four fixed gradient layers (gold → red → purple →
- * doom green) cross-faded by scroll progress, plus halftone texture, vignette
+ * doom green) cross-faded by scroll progress, plus film grain, vignette
  * and a sparse ember-particle canvas.  All rAF-throttled and paused when the
  * tab is hidden; static under prefers-reduced-motion.
  */
@@ -126,7 +126,7 @@ export default function SagaBackground() {
           style={{ backgroundImage: layer.bg, opacity: i === 0 ? 1 : 0 }}
         />
       ))}
-      <div className="halftone" />
+      <div className="grain" />
       <div className="vignette" />
       <canvas
         ref={canvasRef}

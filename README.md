@@ -44,3 +44,5 @@ Then in the Vercel dashboard:
 - `components/Board.tsx` + `ArrowPath.tsx` — the snake grid and the arrow trail.
 - `app/api/progress` — shared watched-state (Redis, falls back to a local file).
 - `app/api/title/[id]` — TMDB proxy (key stays server-side, cached daily).
+- `app/api/artwork` — every poster + backdrop in one call for the poster wall (same daily cache).
+- `components/Hero.tsx` — the "Now showing" spotlight on your next movie and the big Doomsday clock.

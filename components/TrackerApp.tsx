@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { celebrate, phaseVictory } from "@/lib/confetti";
 import { Profile, profileById } from "@/lib/profiles";
 import { COUNTED_MOVIES, Entry, MOVIES, moviesInOrder, PHASE_BOSSES, PHASE_COLORS, PHASE_LABELS, SHOWS } from "@/lib/timeline";
+import { useArtwork } from "@/lib/useArtwork";
 import { useProgress } from "@/lib/useProgress";
 import Board from "./Board";
 import DetailModal from "./DetailModal";
+import Hero from "./Hero";
 import ProfilePicker from "./ProfilePicker";
 import ProgressHeader from "./ProgressHeader";
 import SagaBackground from "./SagaBackground";
@@ -28,6 +30,7 @@ export default function TrackerApp() {
 
   const profile = profileById(profileId);
   const { watched, toggle } = useProgress(profile?.id ?? null);
+  const art = useArtwork();
   const [orderMode, setOrderModeState] = useState<"release" | "chrono">("release");
   const [showShows, setShowShowsState] = useState(false);
   const [selected, setSelected] = useState<Entry | null>(null);
@@ -58,16 +61,23 @@ export default function TrackerApp() {
     saveSettings(orderMode, show);
   };
 
-  // phones get a roomier 2-wide snake so wordmarks don't wrap into mush
-  const [isMobile, setIsMobile] = useState(false);
+  // poster wall density: 2-up on phones, 4-up on tablets, 3-up beside the TV
+  // column, a 6-wide shelf when the movies have the whole stage
+  const [viewport, setViewport] = useState<"phone" | "tablet" | "wide">("wide");
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 640px)");
-    const update = () => setIsMobile(mq.matches);
+    const phone = window.matchMedia("(max-width: 640px)");
+    const tablet = window.matchMedia("(max-width: 1023px)");
+    const update = () => setViewport(phone.matches ? "phone" : tablet.matches ? "tablet" : "wide");
     update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
+    phone.addEventListener("change", update);
+    tablet.addEventListener("change", update);
+    return () => {
+      phone.removeEventListener("change", update);
+      tablet.removeEventListener("change", update);
+    };
   }, []);
-  const movieCols = isMobile ? 2 : 3;
+  const isMobile = viewport === "phone";
+  const movieCols = isMobile ? 2 : showShows ? 3 : viewport === "tablet" ? 4 : 6;
 
   const movieOrder = useMemo(() => moviesInOrder(orderMode), [orderMode]);
 
@@ -76,6 +86,7 @@ export default function TrackerApp() {
   const doomGlow = COUNTED_MOVIES.length ? watchedMovies / COUNTED_MOVIES.length : 0;
 
   const upNextMovie = movieOrder.find((e) => !watched[e.id])?.id ?? null;
+  const heroEntry = movieOrder.find((e) => e.id === upNextMovie) ?? movieOrder[movieOrder.length - 1];
   const upNextShow = SHOWS.find((e) => !watched[e.id])?.id ?? null;
 
   const handleToggle = async (entry: Entry) => {
@@ -102,7 +113,7 @@ export default function TrackerApp() {
     return (
       <div className="relative min-h-screen">
         <SagaBackground />
-        <ProfilePicker onPick={pickProfile} />
+        <ProfilePicker onPick={pickProfile} art={art} />
       </div>
     );
   }
@@ -127,15 +138,31 @@ export default function TrackerApp() {
         }}
       />
 
-      <main className="mx-auto max-w-6xl px-4 pb-24 pt-8">
+      <Hero
+        entry={heroEntry}
+        position={movieOrder.indexOf(heroEntry) + 1}
+        total={COUNTED_MOVIES.length}
+        watchedCount={watchedMovies}
+        allDone={upNextMovie === null || upNextMovie === "doomsday"}
+        art={art}
+        onOpen={setSelected}
+        onToggle={handleToggle}
+      />
+
+      <main className="mx-auto max-w-6xl px-4 pb-24 pt-10">
         <div className="flex flex-col gap-12 lg:flex-row lg:gap-8">
           {/* movies — the main quest */}
-          <section className={showShows ? "min-w-0 lg:flex-[3]" : "mx-auto w-full max-w-3xl min-w-0"}>
-            <div className="mb-4 flex items-baseline justify-between">
-              <h2 className="f-bebas text-lg tracking-[0.35em] text-white/70">THE MOVIES</h2>
-              <span className="text-[11px] uppercase tracking-[0.2em] text-white/35">
-                {orderMode === "release" ? "release order" : "in-universe timeline"}
-              </span>
+          <section className={showShows ? "min-w-0 lg:flex-[3]" : "w-full min-w-0"}>
+            <div className="section-head">
+              <h2 className="section-title">The Movies</h2>
+              <div className="order-switch" role="group" aria-label="Watch order">
+                <button className={orderMode === "release" ? "active" : ""} onClick={() => setOrderMode("release")}>
+                  Release
+                </button>
+                <button className={orderMode === "chrono" ? "active" : ""} onClick={() => setOrderMode("chrono")}>
+                  Timeline
+                </button>
+              </div>
             </div>
             <Board
               entries={movieOrder}
@@ -146,7 +173,8 @@ export default function TrackerApp() {
               finaleId="doomsday"
               doomGlow={doomGlow}
               layoutKey={`movies-${orderMode}-${movieCols}`}
-              wordmarkBase={isMobile ? 1.2 : 1.35}
+              art={art}
+              wordmarkBase={isMobile ? 1.15 : movieCols >= 4 ? 1.1 : 1.35}
               onSelect={setSelected}
               onQuickToggle={handleToggle}
             />
@@ -155,13 +183,13 @@ export default function TrackerApp() {
           {/* shows — the side quest */}
           {showShows && (
           <aside className="min-w-0 lg:flex-[2] lg:border-l lg:border-white/10 lg:pl-8">
-            <div className="mb-4 flex items-baseline justify-between">
-              <h2 className="f-bebas text-lg tracking-[0.35em] text-white/70">SIDE QUEST · TV</h2>
-              <span className="text-[11px] uppercase tracking-[0.2em] text-white/35">
+            <div className="section-head">
+              <h2 className="section-title">Side Quest · TV</h2>
+              <span className="section-meta">
                 {watchedShows}/{SHOWS.length}
               </span>
             </div>
-            <p className="mb-5 text-xs leading-relaxed text-white/40">
+            <p className="mb-6 text-xs leading-relaxed text-white/45">
               The shows don&apos;t count toward the Doomsday clock — knock them out whenever.
               The first six are the Netflix era: semi-canon, skippable, but great.
             </p>
@@ -171,6 +199,7 @@ export default function TrackerApp() {
               watched={watched}
               upNextId={upNextShow}
               layoutKey="shows"
+              art={art}
               wordmarkBase={isMobile ? 1.0 : 1.15}
               onSelect={setSelected}
               onQuickToggle={handleToggle}
@@ -179,7 +208,7 @@ export default function TrackerApp() {
           )}
         </div>
 
-        <footer className="mt-20 text-center text-[11px] uppercase tracking-[0.3em] text-white/25">
+        <footer className="site-footer">
           {profile.label} vs. the Multiverse · data from TMDB
         </footer>
       </main>
