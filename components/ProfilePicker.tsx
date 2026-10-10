@@ -2,29 +2,44 @@
 
 import { Profile, PROFILES } from "@/lib/profiles";
 
-/** Full-screen "who's watching?" gate, shown until a profile is picked. */
+function initials(label: string) {
+  return label
+    .split(/[^A-Za-z]+/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("");
+}
+
+/** Full-screen "identify operative" gate, shown until a profile is picked. */
 export default function ProfilePicker({ onPick }: { onPick: (p: Profile) => void }) {
   return (
     <div className="picker-overlay">
-      <div className="text-center">
-        <div className="mb-2 text-[11px] uppercase tracking-[0.5em] text-white/40">Road to Doomsday</div>
-        <h1 className="f-bebas mb-10 text-3xl tracking-[0.2em] text-white/90 sm:text-4xl">
-          WHO&apos;S WATCHING?
-        </h1>
-        <div className="flex flex-wrap items-center justify-center gap-6">
-          {PROFILES.map((p) => (
+      <div className="picker-frame">
+        <span className="br-bl" aria-hidden="true" />
+        <span className="br-br" aria-hidden="true" />
+        <div className="hud-label mb-3" style={{ color: "var(--hud)" }}>
+          Road to Doomsday // Access Terminal
+        </div>
+        <h1 className="picker-title mb-8">Identify operative</h1>
+        <div className="flex flex-wrap items-center justify-center gap-5">
+          {PROFILES.map((p, i) => (
             <button
               key={p.id}
               className="picker-card"
               style={{ "--aura": p.color } as React.CSSProperties}
               onClick={() => onPick(p)}
             >
+              <span className="picker-avatar" aria-hidden="true">
+                {initials(p.label)}
+              </span>
               <span className="picker-name">{p.label}</span>
+              <span className="picker-clear">Clearance · Level {i + 1 === 1 ? "Alpha" : "Omega"}</span>
             </button>
           ))}
         </div>
-        <p className="mt-10 text-[11px] uppercase tracking-[0.25em] text-white/30">
-          each crew gets its own trail
+        <p className="mt-8 hud-label" style={{ letterSpacing: "0.2em" }}>
+          each crew tracks its own flight path
         </p>
       </div>
     </div>

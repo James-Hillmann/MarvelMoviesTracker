@@ -22,9 +22,9 @@ export function phaseVictory(phaseLabel: string, bossName: string, quip: string,
   overlay.innerHTML = `
     <div class="pv-inner">
       ${img ? `<img class="pv-img" src="${img}" alt="">` : ""}
-      <div class="pv-phase">${phaseLabel} — Complete</div>
+      <div class="pv-phase">${phaseLabel} // sector cleared</div>
       <div class="pv-boss">${bossName}<span class="pv-slash"></span></div>
-      <div class="pv-defeated">Defeated</div>
+      <div class="pv-defeated">Neutralized</div>
       <div class="pv-quip">&ldquo;${quip}&rdquo;</div>
     </div>`;
   document.body.appendChild(overlay);

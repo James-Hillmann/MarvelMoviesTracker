@@ -36,7 +36,19 @@ function buildRows(entries: Entry[], cols: number, showPhases: boolean): LayoutR
   return rows;
 }
 
-function PhaseBanner({ phase, row, defeated }: { phase: number; row: number; defeated: boolean }) {
+function PhaseBanner({
+  phase,
+  row,
+  defeated,
+  cleared,
+  total,
+}: {
+  phase: number;
+  row: number;
+  defeated: boolean;
+  cleared: number;
+  total: number;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -50,20 +62,37 @@ function PhaseBanner({ phase, row, defeated }: { phase: number; row: number; def
     return () => io.disconnect();
   }, []);
   const boss = PHASE_BOSSES[phase];
+  const [name, saga] = PHASE_LABELS[phase].split("—").map((t) => t.trim());
   return (
     <div
       ref={ref}
       className={`phase-banner ${visible ? "visible" : ""} ${defeated ? "defeated" : ""}`}
       style={{ "--phase-color": PHASE_COLORS[phase], gridRow: row, gridColumn: "1 / -1" } as React.CSSProperties}
     >
-      <div className="rule" />
+      <div className="rule lead" />
       <div className="banner-core">
-        <span className="label">{PHASE_LABELS[phase]}</span>
-        {defeated && boss && (
-          <span className="boss-tag">
-            <span className="boss-skull">☠</span> {boss.name} defeated
+        <div className="label-row">
+          <span className="num">SECTOR {String(phase).padStart(2, "0")}</span>
+          <span className="label">{name}</span>
+          {saga && <span className="num" style={{ opacity: 0.7 }}>{saga}</span>}
+        </div>
+        <div className="meta">
+          <span className="meter" aria-hidden="true">
+            {Array.from({ length: total }, (_, i) => (
+              <i key={i} className={i < cleared ? "on" : ""} />
+            ))}
           </span>
-        )}
+          <span>
+            {cleared}/{total} cleared
+          </span>
+          {defeated && boss ? (
+            <span className="boss-tag">
+              <span className="boss-skull">☠</span> threat neutralized: {boss.name}
+            </span>
+          ) : boss ? (
+            <span style={{ opacity: 0.7 }}>threat: {boss.name}</span>
+          ) : null}
+        </div>
       </div>
       <div className="rule" />
     </div>
@@ -109,6 +138,11 @@ export default function Board({
 
   const phaseDefeated = (p: number) =>
     entries.filter((e) => e.phase === p).every((e) => watched[e.id]);
+  const phaseCount = (p: number) => {
+    const list = entries.filter((e) => e.phase === p);
+    return { total: list.length, cleared: list.filter((e) => watched[e.id]).length };
+  };
+  const indexOf = new Map(entries.map((e, i) => [e.id, i + 1]));
 
   // grid-row span of each phase's cells (banner row excluded) for ruin overlays
   const phaseSpans: { phase: number; start: number; end: number }[] = [];
@@ -146,18 +180,31 @@ export default function Board({
         }}
         aria-label={`${e.sub ? e.sub + " " : ""}${e.title} (${e.year})`}
       >
-        {isUpNext && <span className="upnext-badge">Up Next</span>}
+        <span className="br-bl" aria-hidden="true" />
+        <span className="br-br" aria-hidden="true" />
+        <span className="idx" aria-hidden="true">{String(indexOf.get(e.id) ?? 0).padStart(2, "0")}</span>
+        <span className="yr" aria-hidden="true">{e.year}</span>
+        {isUpNext && <span className="scan" aria-hidden="true" />}
+        {isUpNext && (
+          <span className="upnext-badge">
+            <span className="dot" aria-hidden="true" />
+            Target locked
+          </span>
+        )}
         {e.sub && <span className="sub-label">{e.sub}</span>}
         <Wordmark entry={e} base={wordmarkBase} />
         {e.type === "netflix" && <span className="optional-badge">optional</span>}
         {isWatched && (
           <span className="stamp">
-            <span>Watched</span>
+            <span>
+              <span className="tick" aria-hidden="true">✓</span>
+              Cleared
+            </span>
           </span>
         )}
         <button
-          className="quick-check absolute -right-1 -top-1 z-10 hidden h-6 w-6 items-center justify-center rounded-full border border-white/25 bg-black/70 text-[11px] leading-none text-white/80 opacity-0 transition-opacity group-hover:flex group-hover:opacity-100 hover:border-green-400 hover:text-green-300"
-          title={isWatched ? "Mark as unwatched" : "Mark as watched"}
+          className="quick-check"
+          title={isWatched ? "Mark as unwatched" : "Mark as cleared"}
           onClick={(ev) => {
             ev.stopPropagation();
             onQuickToggle(e);
@@ -184,6 +231,7 @@ export default function Board({
                 phase={row.phase}
                 row={gridRow}
                 defeated={phaseDefeated(row.phase)}
+                {...phaseCount(row.phase)}
               />,
             ];
           }
@@ -221,6 +269,9 @@ export default function Board({
           <div className="doom-mist" />
           <div className="portal-ring" />
           <div className="portal-ring inner" />
+          <div className="threat-tag">
+            Final objective <span className="lvl">threat level omega</span>
+          </div>
           <div className="w-[min(240px,60vw)]">{renderCell(finale)}</div>
         </div>
       )}

@@ -33,6 +33,8 @@ function useCountdown(target: string) {
   return { days, hours, mins, secs };
 }
 
+const pad = (n: number) => String(n).padStart(2, "0");
+
 export default function ProgressHeader({
   watchedMovies,
   totalMovies,
@@ -47,7 +49,7 @@ export default function ProgressHeader({
 }: Props) {
   const cd = useCountdown(DOOMSDAY_DATE);
   const remaining = totalMovies - watchedMovies;
-  const pct = totalMovies ? (watchedMovies / totalMovies) * 100 : 0;
+  const pct = totalMovies ? Math.round((watchedMovies / totalMovies) * 100) : 0;
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -67,42 +69,64 @@ export default function ProgressHeader({
     const daysPer = cd.days / remaining;
     pace =
       daysPer >= 1.5
-        ? `≈ 1 movie every ${Math.floor(daysPer)} days to make it`
+        ? `required pace: 1 film / ${Math.floor(daysPer)} days`
         : daysPer >= 0.9
-          ? "≈ 1 movie a day to make it — get moving!"
-          : `≈ ${Math.ceil(1 / daysPer)} movies a day needed — assemble!`;
+          ? "required pace: 1 film / day — move"
+          : `required pace: ${Math.ceil(1 / daysPer)} films / day — assemble`;
   } else if (remaining === 0) {
-    pace = "Caught up. Doomsday awaits.";
+    pace = "all objectives complete. awaiting doomsday.";
   }
 
-  return (
-    <header className="relative z-40 border-b border-white/10 bg-black/55 backdrop-blur-md sm:sticky sm:top-0">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-1.5 px-3 py-2 sm:gap-y-2 sm:px-4 sm:py-3">
-        {/* row 1: title · countdown · profile/settings */}
-        <h1 className="hdr-title text-xl sm:text-3xl">ROAD TO DOOMSDAY</h1>
+  const initials = profile.label
+    .split(/[^A-Za-z]+/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("");
 
-        <div className="ml-auto flex items-center gap-3 sm:order-3 sm:ml-0">
-          <div className="text-right leading-tight" suppressHydrationWarning>
+  return (
+    <header className="hud-header sm:sticky sm:top-0">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-3 py-2.5 sm:gap-y-2 sm:px-4 sm:py-3">
+        {/* row 1: title · countdown · profile/settings */}
+        <div className="flex flex-col gap-0.5">
+          <div className="hdr-kicker">
+            <span className="live" aria-hidden="true" />
+            Operation // Mission Control
+          </div>
+          <h1 className="hdr-title text-xl sm:text-[1.7rem]">Road to Doomsday</h1>
+        </div>
+
+        <div className="ml-auto flex items-center gap-3 sm:order-3 sm:ml-0 sm:gap-4">
+          <div className="flex flex-col items-end gap-0.5" suppressHydrationWarning>
             {cd ? (
               <>
-                <div className="font-mono text-sm tabular-nums text-white/90 sm:text-xl">
-                  {cd.days}
-                  <span className="text-white/40">d </span>
-                  {String(cd.hours).padStart(2, "0")}
-                  <span className="text-white/40">h </span>
-                  {String(cd.mins).padStart(2, "0")}
-                  <span className="text-white/40">m </span>
-                  <span className="hidden sm:inline">
-                    {String(cd.secs).padStart(2, "0")}
-                    <span className="text-white/40">s</span>
+                <div className="countdown">
+                  <span className="unit">
+                    <b>{cd.days}</b>
+                    <small>days</small>
+                  </span>
+                  <span className="sep">:</span>
+                  <span className="unit">
+                    <b>{pad(cd.hours)}</b>
+                    <small>hrs</small>
+                  </span>
+                  <span className="sep">:</span>
+                  <span className="unit">
+                    <b>{pad(cd.mins)}</b>
+                    <small>min</small>
+                  </span>
+                  <span className="sep hidden sm:inline">:</span>
+                  <span className="unit hidden sm:flex">
+                    <b>{pad(cd.secs)}</b>
+                    <small>sec</small>
                   </span>
                 </div>
-                <div className="text-[9px] uppercase tracking-[0.3em] text-[color:var(--doom-green)]/80 sm:text-[10px]">
-                  until Doomsday
+                <div className="hud-label" style={{ color: "var(--doom-green)", opacity: 0.85 }}>
+                  T-minus · Doomsday
                 </div>
               </>
             ) : (
-              <div className="h-8 w-32 sm:h-9 sm:w-40" />
+              <div className="h-9 w-36 sm:h-10 sm:w-48" />
             )}
           </div>
 
@@ -120,6 +144,9 @@ export default function ProgressHeader({
               aria-haspopup="menu"
               aria-expanded={menuOpen}
             >
+              <span className="avatar" aria-hidden="true">
+                {initials}
+              </span>
               {profile.label}
               <span className={`chev ${menuOpen ? "open" : ""}`} aria-hidden="true">
                 ▾
@@ -159,7 +186,7 @@ export default function ProgressHeader({
                 <div className="settings-divider" />
 
                 <button className="settings-row" onClick={onSwitchProfile}>
-                  <span>Switch profile</span>
+                  <span>Switch operative</span>
                   <span aria-hidden="true">↩</span>
                 </button>
               </div>
@@ -167,11 +194,11 @@ export default function ProgressHeader({
           </div>
         </div>
 
-        {/* row 2: full-width progress bar */}
-        <div className="order-3 w-full min-w-0 sm:order-2 sm:w-auto sm:min-w-[160px] sm:flex-1">
-          <div className="mb-1 flex items-baseline justify-between text-[10px] uppercase tracking-[0.2em] text-white/60 sm:text-[11px]">
+        {/* row 2: segmented charge meter, one tick per movie */}
+        <div className="order-3 w-full min-w-0 sm:order-2 sm:w-auto sm:min-w-[200px] sm:flex-1">
+          <div className="mb-1.5 flex items-baseline justify-between hud-label">
             <span>
-              <span className="text-white/95">{watchedMovies}</span> / {totalMovies} movies
+              <span className="on">{pad(watchedMovies)}</span> / {totalMovies} films cleared · <span className="on">{pct}%</span>
             </span>
             {showShows && (
               <span>
@@ -179,10 +206,15 @@ export default function ProgressHeader({
               </span>
             )}
           </div>
-          <div className="progress-track">
-            <div className="progress-fill" style={{ width: `${pct}%` }} />
+          <div className="charge" aria-hidden="true">
+            {Array.from({ length: totalMovies + 1 }, (_, i) => {
+              const isLast = i === totalMovies;
+              const on = i < watchedMovies;
+              const next = i === watchedMovies && !isLast;
+              return <i key={i} className={`${on ? "on" : ""} ${next ? "next" : ""} ${isLast ? "last" : ""}`} />;
+            })}
           </div>
-          {pace && <div className="mt-1 text-[10px] tracking-wide text-white/45 sm:text-[11px]">{pace}</div>}
+          {pace && <div className="mt-1.5 hud-label" style={{ letterSpacing: "0.14em" }}>{pace}</div>}
         </div>
       </div>
     </header>

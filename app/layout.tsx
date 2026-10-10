@@ -9,7 +9,9 @@ import {
   Monoton,
   Orbitron,
   Oswald,
+  Rajdhani,
   Russo_One,
+  Share_Tech_Mono,
 } from "next/font/google";
 import "./globals.css";
 
@@ -23,10 +25,12 @@ const creepster = Creepster({ weight: "400", subsets: ["latin"], variable: "--fo
 const orbitron = Orbitron({ weight: "700", subsets: ["latin"], variable: "--font-orbitron" });
 const monoton = Monoton({ weight: "400", subsets: ["latin"], variable: "--font-monoton" });
 const oswald = Oswald({ weight: ["300", "500"], subsets: ["latin"], variable: "--font-oswald" });
+const rajdhani = Rajdhani({ weight: ["500", "600", "700"], subsets: ["latin"], variable: "--font-rajdhani" });
+const mono = Share_Tech_Mono({ weight: "400", subsets: ["latin"], variable: "--font-mono-hud" });
 
 export const metadata: Metadata = {
   title: "Road to Doomsday",
-  description: "James & Deniz's MCU watch-through tracker — every movie before Avengers: Doomsday.",
+  description: "Mission control for the MCU watch-through — every movie before Avengers: Doomsday.",
 };
 
 const fontVars = [
@@ -40,6 +44,8 @@ const fontVars = [
   orbitron,
   monoton,
   oswald,
+  rajdhani,
+  mono,
 ]
   .map((f) => f.variable)
   .join(" ");

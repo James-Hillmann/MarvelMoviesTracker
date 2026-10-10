@@ -3,17 +3,18 @@
 import { useEffect, useRef } from "react";
 
 /**
- * "Saga Eras" background — four fixed gradient layers (gold → red → purple →
- * doom green) cross-faded by scroll progress, plus halftone texture, vignette
- * and a sparse ember-particle canvas.  All rAF-throttled and paused when the
- * tab is hidden; static under prefers-reduced-motion.
+ * "Mission Control" background — four fixed tint layers (steel → infinity
+ * red → multiverse violet → doom green) cross-faded by scroll progress, a
+ * holographic grid, scanlines, a slow radar sweep and a sparse data-mote
+ * canvas. rAF-throttled, paused when the tab is hidden, static under
+ * prefers-reduced-motion.
  */
 
 const LAYERS = [
-  { stop: 0.0, bg: "radial-gradient(110% 80% at 50% 10%, #2a1f08 0%, #120d04 45%, #050508 100%)" }, // gold era
-  { stop: 0.38, bg: "radial-gradient(110% 80% at 50% 30%, #2c0a10 0%, #16060a 45%, #050508 100%)" }, // infinity red
-  { stop: 0.7, bg: "radial-gradient(110% 80% at 50% 50%, #1c0a34 0%, #0e0620 45%, #050508 100%)" }, // multiverse purple
-  { stop: 1.0, bg: "radial-gradient(110% 90% at 50% 85%, #06301a 0%, #04180e 45%, #050508 100%)" }, // doom green
+  { stop: 0.0, bg: "radial-gradient(110% 80% at 50% 10%, #0a1a2c 0%, #060d18 45%, #04070d 100%)" }, // steel / stark
+  { stop: 0.38, bg: "radial-gradient(110% 80% at 50% 30%, #2a0a14 0%, #14060c 45%, #04070d 100%)" }, // infinity red
+  { stop: 0.7, bg: "radial-gradient(110% 80% at 50% 50%, #180a30 0%, #0c061e 45%, #04070d 100%)" }, // multiverse violet
+  { stop: 1.0, bg: "radial-gradient(110% 90% at 50% 85%, #06301a 0%, #04180e 45%, #04070d 100%)" }, // doom green
 ];
 
 export default function SagaBackground() {
@@ -48,7 +49,7 @@ export default function SagaBackground() {
     };
   }, []);
 
-  // ember particles
+  // data motes — tiny cyan squares drifting upward, flickering
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -65,13 +66,13 @@ export default function SagaBackground() {
     resize();
     window.addEventListener("resize", resize);
 
-    const parts = Array.from({ length: 40 }, () => ({
+    const parts = Array.from({ length: 34 }, () => ({
       x: Math.random() * 2000,
       y: Math.random() * 1400,
-      r: 0.6 + Math.random() * 1.6,
-      vy: 0.1 + Math.random() * 0.35,
-      vx: (Math.random() - 0.5) * 0.15,
-      a: 0.1 + Math.random() * 0.35,
+      s: 1 + Math.random() * 1.6,
+      vy: 0.08 + Math.random() * 0.28,
+      vx: (Math.random() - 0.5) * 0.1,
+      a: 0.08 + Math.random() * 0.3,
       tw: Math.random() * Math.PI * 2,
     }));
 
@@ -83,17 +84,16 @@ export default function SagaBackground() {
       for (const p of parts) {
         p.y -= p.vy;
         p.x += p.vx;
-        p.tw += 0.02;
+        p.tw += 0.03;
         if (p.y < -4) {
           p.y = H + 4;
           p.x = Math.random() * W;
         }
         if (p.x < -4) p.x = W + 4;
         if (p.x > W + 4) p.x = -4;
-        ctx.beginPath();
-        ctx.arc(p.x % (W + 8), p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 220, 160, ${p.a * (0.6 + 0.4 * Math.sin(p.tw))})`;
-        ctx.fill();
+        const alpha = p.a * (0.5 + 0.5 * Math.sin(p.tw));
+        ctx.fillStyle = `rgba(120, 225, 255, ${alpha})`;
+        ctx.fillRect(p.x % (W + 8), p.y, p.s, p.s);
       }
       raf = requestAnimationFrame(frame);
     };
@@ -126,12 +126,24 @@ export default function SagaBackground() {
           style={{ backgroundImage: layer.bg, opacity: i === 0 ? 1 : 0 }}
         />
       ))}
-      <div className="halftone" />
+      <div className="hud-grid" />
+      <div className="hud-scanlines" />
+      <div className="hud-sweep" />
       <div className="vignette" />
       <canvas
         ref={canvasRef}
-        style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: -1, opacity: 0.7 }}
+        style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: -1, opacity: 0.8 }}
       />
+      <div className="hud-corner bl" aria-hidden="true">
+        SYS // MISSION CONTROL
+        <br />
+        UPLINK: TMDB · SECURE
+      </div>
+      <div className="hud-corner br" aria-hidden="true">
+        TARGET: AVENGERS DOOMSDAY
+        <br />
+        2026.12.18
+      </div>
     </>
   );
 }

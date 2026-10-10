@@ -131,10 +131,10 @@ export default function TrackerApp() {
         <div className="flex flex-col gap-12 lg:flex-row lg:gap-8">
           {/* movies — the main quest */}
           <section className={showShows ? "min-w-0 lg:flex-[3]" : "mx-auto w-full max-w-3xl min-w-0"}>
-            <div className="mb-4 flex items-baseline justify-between">
-              <h2 className="f-bebas text-lg tracking-[0.35em] text-white/70">THE MOVIES</h2>
-              <span className="text-[11px] uppercase tracking-[0.2em] text-white/35">
-                {orderMode === "release" ? "release order" : "in-universe timeline"}
+            <div className="sec-head">
+              <h2>Primary objectives</h2>
+              <span className="hud-label">
+                {orderMode === "release" ? "release order" : "in-universe timeline"} · {COUNTED_MOVIES.length} films
               </span>
             </div>
             <Board
@@ -154,14 +154,14 @@ export default function TrackerApp() {
 
           {/* shows — the side quest */}
           {showShows && (
-          <aside className="min-w-0 lg:flex-[2] lg:border-l lg:border-white/10 lg:pl-8">
-            <div className="mb-4 flex items-baseline justify-between">
-              <h2 className="f-bebas text-lg tracking-[0.35em] text-white/70">SIDE QUEST · TV</h2>
-              <span className="text-[11px] uppercase tracking-[0.2em] text-white/35">
-                {watchedShows}/{SHOWS.length}
+          <aside className="min-w-0 lg:flex-[2] lg:border-l lg:border-[color:var(--line)] lg:pl-8">
+            <div className="sec-head">
+              <h2>Side quest · TV</h2>
+              <span className="hud-label">
+                {watchedShows}/{SHOWS.length} cleared
               </span>
             </div>
-            <p className="mb-5 text-xs leading-relaxed text-white/40">
+            <p className="mb-5 text-xs leading-relaxed" style={{ color: "rgba(160,210,235,0.5)" }}>
               The shows don&apos;t count toward the Doomsday clock — knock them out whenever.
               The first six are the Netflix era: semi-canon, skippable, but great.
             </p>
@@ -179,8 +179,8 @@ export default function TrackerApp() {
           )}
         </div>
 
-        <footer className="mt-20 text-center text-[11px] uppercase tracking-[0.3em] text-white/25">
-          {profile.label} vs. the Multiverse · data from TMDB
+        <footer className="mt-20 text-center hud-label" style={{ opacity: 0.7 }}>
+          operative: {profile.label} · uplink: TMDB · end of transmission
         </footer>
       </main>
 
