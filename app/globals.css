@@ -199,7 +199,6 @@ body {
   inset: 0;
   pointer-events: none;
   z-index: -2;
-  transition: opacity 0.3s linear;
 }
 .vignette {
   position: fixed;
@@ -383,7 +382,10 @@ body {
    CINEMATIC LAYER
    ===================================================================== */
 
-/* ---------- film grain + projector light ---------- */
+/* ---------- film grain + projector light ----------
+   Performance note: on big monitors any animation that never stops makes the
+   browser recomposite the page every frame. Decorative loops here run a few
+   times and settle; only the premiere marquee keeps going while on screen. */
 .grain {
   position: fixed;
   inset: 0;
@@ -434,7 +436,7 @@ body {
   border-radius: 50%;
   background: var(--doom-green);
   box-shadow: 0 0 10px var(--doom-green), 0 0 22px rgba(61, 255, 110, 0.5);
-  animation: dot-pulse 2.4s ease-in-out infinite;
+  animation: dot-pulse 2.4s ease-in-out 6;
 }
 
 @keyframes dot-pulse {
@@ -522,7 +524,7 @@ body {
   inset: 0;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
   width: 40%;
-  animation: fill-shine 3.2s ease-in-out infinite;
+  animation: fill-shine 3.2s ease-in-out 3;
 }
 
 @keyframes fill-flow {
@@ -617,9 +619,9 @@ body {
   height: 100%;
   object-fit: cover;
   object-position: center 25%;
-  animation: ken-burns 38s ease-in-out infinite alternate;
-  filter: saturate(1.05);
-  will-change: transform;
+  /* static on purpose: a moving, masked full-width backdrop redrew the whole
+     hero every frame, which is what made large screens lag */
+  transform: scale(1.02);
 }
 
 @keyframes ken-burns {
@@ -655,8 +657,6 @@ body {
      gradient forced the whole hero to re-composite every frame */
   transform: rotate(1deg);
   opacity: 0.85;
-  animation: beam-breathe 9s ease-in-out infinite alternate;
-  will-change: opacity;
 }
 
 @keyframes beam-breathe {
@@ -716,7 +716,7 @@ body {
   border-radius: 50%;
   background: #ff3b3b;
   box-shadow: 0 0 10px #ff3b3b;
-  animation: dot-pulse 1.6s ease-in-out infinite;
+  animation: dot-pulse 1.6s ease-in-out 6;
 }
 
 .hero-kicker-sep {
@@ -801,7 +801,7 @@ body {
     0 40px 80px rgba(0, 0, 0, 0.7),
     0 0 0 1px rgba(255, 255, 255, 0.12),
     0 0 60px color-mix(in srgb, var(--aura) 35%, transparent);
-  animation: poster-float-in 1.2s var(--ease-out) 0.2s both, poster-float 7s ease-in-out 1.4s infinite alternate;
+  animation: poster-float-in 1.2s var(--ease-out) 0.2s both;
   transition: transform 0.6s var(--ease-out);
 }
 
@@ -1103,7 +1103,7 @@ body {
 
 .reel-cell.here {
   background: rgba(255, 255, 255, 0.85);
-  animation: dot-pulse 1.4s ease-in-out infinite;
+  animation: dot-pulse 1.4s ease-in-out 6;
 }
 
 /* ---------- chapters ---------- */
@@ -1573,7 +1573,7 @@ body {
   pointer-events: none;
   box-shadow: 0 0 60px color-mix(in srgb, var(--aura) 70%, transparent);
   opacity: 0.3;
-  animation: showing-pulse 2.6s ease-in-out infinite;
+  animation: showing-pulse 2.6s ease-in-out 5;
   will-change: opacity;
 }
 
@@ -1594,7 +1594,7 @@ body {
   background: conic-gradient(from 165deg at 50% 0%, transparent 0deg, color-mix(in srgb, var(--aura) 28%, transparent) 15deg, transparent 30deg);
   filter: blur(6px);
   opacity: 0.8;
-  animation: beam-flicker 3s steps(12) infinite;
+
 }
 
 @keyframes beam-flicker {
@@ -1629,7 +1629,7 @@ body {
   background: #ff3b3b;
   box-shadow: 0 0 8px #ff3b3b;
   vertical-align: 1px;
-  animation: dot-pulse 1.4s ease-in-out infinite;
+  animation: dot-pulse 1.4s ease-in-out 6;
 }
 
 .frame-foot {
