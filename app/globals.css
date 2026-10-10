@@ -1873,9 +1873,14 @@ body {
     padding: 6px 12px 4px;
   }
   .mv-rail {
-    right: 0.4rem;
-    gap: 0.4rem;
-    padding: 0.5rem 0.3rem;
+    right: 0.35rem;
+    top: auto;
+    bottom: 9.5rem;
+    transform: none;
+    max-height: 42dvh;
+    gap: 0.3rem;
+    padding: 0.4rem 0.25rem;
+    opacity: 0.85;
   }
   .mv-rail-dot {
     width: 6px;
