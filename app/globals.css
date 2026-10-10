@@ -778,6 +778,66 @@ body {
   transform: rotate(180deg);
 }
 
+/* ---------- choose your universe ---------- */
+.picker-cosmos {
+  background: radial-gradient(70% 60% at 50% 45%, rgba(40, 20, 70, 0.55), transparent 70%);
+}
+
+.universe-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  perspective: 600px;
+}
+
+.universe-orb {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  transition: transform 0.4s cubic-bezier(0.2, 1.3, 0.3, 1);
+}
+
+.universe-orb .moon-surface {
+  inset: 22px;
+  filter: none;
+  box-shadow: inset -22px -16px 34px rgba(0, 0, 0, 0.75), 0 0 50px color-mix(in srgb, var(--aura) 45%, transparent);
+}
+
+.universe-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--aura) 70%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--aura) 60%, transparent);
+  transform: rotateX(72deg) rotateY(-12deg);
+  animation: universe-ring var(--spin) linear infinite;
+}
+
+.universe-ring.b {
+  inset: -14px;
+  border-style: dashed;
+  opacity: 0.45;
+  animation-direction: reverse;
+}
+
+@keyframes universe-ring {
+  to { transform: rotateX(72deg) rotateY(-12deg) rotateZ(360deg); }
+}
+
+.universe-pick:hover .universe-orb,
+.universe-pick:focus-visible .universe-orb {
+  transform: scale(1.12) translateY(-6px);
+}
+
+.universe-id {
+  font-family: var(--font-bebas), sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.4em;
+  color: rgba(255, 255, 255, 0.35);
+}
+
 /* ---------- settings dropdown ---------- */
 .settings-wrap {
   position: relative;
