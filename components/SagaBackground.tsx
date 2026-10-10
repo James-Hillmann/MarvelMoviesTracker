@@ -4,9 +4,9 @@ import { useEffect, useRef } from "react";
 
 /**
  * "Saga Eras" background — four fixed gradient layers (gold → red → purple →
- * doom green) cross-faded by scroll progress, plus film grain, vignette
- * and a sparse ember-particle canvas.  All rAF-throttled and paused when the
- * tab is hidden; static under prefers-reduced-motion.
+ * doom green) cross-faded by scroll progress, plus film grain and a
+ * vignette.  Nothing here animates on its own: a full-screen layer that
+ * changes every frame makes big monitors recomposite the whole page.
  */
 
 const LAYERS = [
@@ -16,9 +16,12 @@ const LAYERS = [
   { stop: 1.0, bg: "radial-gradient(110% 90% at 50% 85%, #06301a 0%, #04180e 45%, #050508 100%)" }, // doom green
 ];
 
+/** baked into each era layer rather than its own full-screen layer — one less to composite */
+const VIGNETTE =
+  "radial-gradient(120% 90% at 50% 40%, transparent 50%, rgba(0, 0, 0, 0.7) 100%), linear-gradient(180deg, rgba(0, 0, 0, 0.35), transparent 12%, transparent 88%, rgba(0, 0, 0, 0.45))";
+
 export default function SagaBackground() {
   const refs = useRef<(HTMLDivElement | null)[]>([]);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // scroll-driven cross-fade
   useEffect(() => {
@@ -32,7 +35,10 @@ export default function SagaBackground() {
         const el = refs.current[i];
         if (!el) return;
         const dist = Math.abs(p - layer.stop);
-        el.style.opacity = String(Math.max(0, 1 - dist * 2.6));
+        const op = Math.max(0, 1 - dist * 2.6);
+        el.style.opacity = String(op);
+        // a hidden layer costs nothing to composite; an opacity-0 one still might
+        el.style.visibility = op > 0 ? "visible" : "hidden";
       });
     };
     const onScroll = () => {
@@ -48,79 +54,6 @@ export default function SagaBackground() {
     };
   }, []);
 
-  // ember particles
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let W = 0;
-    let H = 0;
-    const resize = () => {
-      W = canvas.width = window.innerWidth;
-      H = canvas.height = window.innerHeight;
-    };
-    resize();
-    window.addEventListener("resize", resize);
-
-    const parts = Array.from({ length: 40 }, () => ({
-      x: Math.random() * 2000,
-      y: Math.random() * 1400,
-      r: 0.6 + Math.random() * 1.6,
-      vy: 0.1 + Math.random() * 0.35,
-      vx: (Math.random() - 0.5) * 0.15,
-      a: 0.1 + Math.random() * 0.35,
-      tw: Math.random() * Math.PI * 2,
-    }));
-
-    let raf = 0;
-    let running = true;
-    let last = 0;
-    const frame = (t: number) => {
-      if (!running) return;
-      // embers drift slowly, so ~30fps is plenty and halves the full-screen repaints
-      if (t - last < 32) {
-        raf = requestAnimationFrame(frame);
-        return;
-      }
-      last = t;
-      ctx.clearRect(0, 0, W, H);
-      for (const p of parts) {
-        p.y -= p.vy * 2;
-        p.x += p.vx * 2;
-        p.tw += 0.04;
-        if (p.y < -4) {
-          p.y = H + 4;
-          p.x = Math.random() * W;
-        }
-        if (p.x < -4) p.x = W + 4;
-        if (p.x > W + 4) p.x = -4;
-        ctx.beginPath();
-        ctx.arc(p.x % (W + 8), p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 220, 160, ${p.a * (0.6 + 0.4 * Math.sin(p.tw))})`;
-        ctx.fill();
-      }
-      raf = requestAnimationFrame(frame);
-    };
-    raf = requestAnimationFrame(frame);
-
-    const onVis = () => {
-      running = document.visibilityState === "visible";
-      if (running) raf = requestAnimationFrame(frame);
-      else cancelAnimationFrame(raf);
-    };
-    document.addEventListener("visibilitychange", onVis);
-
-    return () => {
-      running = false;
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", resize);
-      document.removeEventListener("visibilitychange", onVis);
-    };
-  }, []);
-
   return (
     <>
       {LAYERS.map((layer, i) => (
@@ -130,15 +63,10 @@ export default function SagaBackground() {
             refs.current[i] = el;
           }}
           className="saga-layer"
-          style={{ backgroundImage: layer.bg, opacity: i === 0 ? 1 : 0 }}
+          style={{ backgroundImage: `${VIGNETTE}, ${layer.bg}`, opacity: i === 0 ? 1 : 0, visibility: i === 0 ? "visible" : "hidden" }}
         />
       ))}
       <div className="grain" />
-      <div className="vignette" />
-      <canvas
-        ref={canvasRef}
-        style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: -1, opacity: 0.7 }}
-      />
     </>
   );
 }
