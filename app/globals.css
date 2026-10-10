@@ -349,7 +349,6 @@ body {
   justify-content: center;
   padding: 1rem;
   background: rgba(3, 3, 6, 0.78);
-  backdrop-filter: blur(6px);
   animation: overlay-in 0.25s ease both;
 }
 
@@ -2166,10 +2165,16 @@ body {
 }
 
 /* ---------- detail modal ---------- */
+/* no backdrop blur: blurring the whole page behind the War Room and detail
+   sheet on every frame is what made them lag on big screens */
 .modal-overlay {
   background: rgba(2, 2, 4, 0.86);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+}
+
+/* the War Room is a full screen of its own: a solid backdrop lets the browser
+   skip drawing the whole page underneath while you scroll or hover the chart */
+.wr-overlay {
+  background: #050508;
 }
 
 .modal-card {
@@ -2220,10 +2225,8 @@ body {
   height: 36px;
   border-radius: 50%;
   color: #fff;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.72);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   transition: background 0.2s ease, transform 0.3s var(--ease-spring);
 }
 
