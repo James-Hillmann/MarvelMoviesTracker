@@ -4,11 +4,14 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Entry } from "@/lib/timeline";
 import { TitleInfo } from "@/lib/tmdb";
+import { watchTogetherUrl } from "@/lib/watchTogether";
 import Wordmark from "./Wordmark";
 
 interface Props {
   entry: Entry;
   watched: boolean;
+  /** current profile — the Watch Together hand-off checks the movie off for it */
+  profileId: string;
   onToggle: (entry: Entry) => void;
   onClose: () => void;
 }
@@ -21,7 +24,7 @@ function searchUrl(entry: Entry) {
   };
 }
 
-export default function DetailModal({ entry, watched, onToggle, onClose }: Props) {
+export default function DetailModal({ entry, watched, profileId, onToggle, onClose }: Props) {
   const [info, setInfo] = useState<TitleInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -54,6 +57,8 @@ export default function DetailModal({ entry, watched, onToggle, onClose }: Props
   }, [onClose]);
 
   const links = searchUrl(entry);
+  // movies only: a show party would "finish" after one episode. Doomsday is theaters-only for now.
+  const canWatchTogether = entry.mediaType === "movie" && entry.id !== "doomsday";
   const score = info?.score ? Math.round(info.score * 10) : null;
 
   return (
@@ -164,6 +169,15 @@ export default function DetailModal({ entry, watched, onToggle, onClose }: Props
           <a className="btn-primary" href={links.disney} target="_blank" rel="noopener noreferrer">
             ▶ Watch on Disney+
           </a>
+          {canWatchTogether && (
+            <button
+              className="btn-together"
+              onClick={() => window.open(watchTogetherUrl(entry, profileId, window.location.origin), "_blank", "noopener")}
+              title="Opens Disney+ for the Watch Together extension. Start a party there and this gets checked off for both of you at the credits."
+            >
+              👥 Watch together
+            </button>
+          )}
           <a
             className="text-xs uppercase tracking-[0.15em] text-white/45 underline-offset-4 hover:text-white/80 hover:underline"
             href={links.justwatch}
