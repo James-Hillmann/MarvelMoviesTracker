@@ -150,6 +150,7 @@ export default function Board({
         {e.sub && <span className="sub-label">{e.sub}</span>}
         <Wordmark entry={e} base={wordmarkBase} />
         {e.type === "netflix" && <span className="optional-badge">optional</span>}
+        {e.keySeries && <span className="optional-badge series-badge">key series</span>}
         {isWatched && (
           <span className="stamp">
             <span>Watched</span>

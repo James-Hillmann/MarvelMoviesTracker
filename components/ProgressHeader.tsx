@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Profile } from "@/lib/profiles";
-import { DOOMSDAY_DATE } from "@/lib/timeline";
+import { DOOMSDAY_DATE, formatRuntime } from "@/lib/timeline";
 
 interface Props {
   watchedMovies: number;
@@ -13,6 +13,11 @@ interface Props {
   onOrderChange: (mode: "release" | "chrono") => void;
   showShows: boolean;
   onShowShowsChange: (show: boolean) => void;
+  keySeries: boolean;
+  onKeySeriesChange: (on: boolean) => void;
+  /** unwatched viewing time left on the trail */
+  minutesLeft: number;
+  totalMinutes: number;
   profile: Profile;
   onSwitchProfile: () => void;
 }
@@ -42,6 +47,10 @@ export default function ProgressHeader({
   onOrderChange,
   showShows,
   onShowShowsChange,
+  keySeries,
+  onKeySeriesChange,
+  minutesLeft,
+  totalMinutes,
   profile,
   onSwitchProfile,
 }: Props) {
@@ -67,12 +76,21 @@ export default function ProgressHeader({
     const daysPer = cd.days / remaining;
     pace =
       daysPer >= 1.5
-        ? `≈ 1 movie every ${Math.floor(daysPer)} days to make it`
+        ? `≈ 1 movie every ${Math.round(daysPer)} days to make it`
         : daysPer >= 0.9
           ? "≈ 1 movie a day to make it — get moving!"
           : `≈ ${Math.ceil(1 / daysPer)} movies a day needed — assemble!`;
   } else if (remaining === 0) {
     pace = "Caught up. Doomsday awaits.";
+  }
+
+  let hours: string | null = null;
+  if (minutesLeft > 0) {
+    hours = `${formatRuntime(minutesLeft)} left`;
+    if (cd && cd.days > 0) {
+      const perWeek = minutesLeft / (cd.days / 7);
+      hours += ` · ≈ ${perWeek >= 60 ? `${Math.round(perWeek / 60)}h` : `${Math.ceil(perWeek)}m`}/wk`;
+    }
   }
 
   return (
@@ -156,6 +174,19 @@ export default function ProgressHeader({
                   </span>
                 </button>
 
+                <button
+                  className="settings-row"
+                  role="menuitemcheckbox"
+                  aria-checked={keySeries}
+                  onClick={() => onKeySeriesChange(!keySeries)}
+                  title="Slot Loki, WandaVision, Falcon & Winter Soldier and Ms. Marvel into the movie trail"
+                >
+                  <span>Add key Disney+ series</span>
+                  <span className={`switch ${keySeries ? "on" : ""}`} aria-hidden="true">
+                    <span className="knob" />
+                  </span>
+                </button>
+
                 <div className="settings-divider" />
 
                 <button className="settings-row" onClick={onSwitchProfile}>
@@ -182,7 +213,16 @@ export default function ProgressHeader({
           <div className="progress-track">
             <div className="progress-fill" style={{ width: `${pct}%` }} />
           </div>
-          {pace && <div className="mt-1 text-[10px] tracking-wide text-white/45 sm:text-[11px]">{pace}</div>}
+          {(pace || hours) && (
+            <div className="mt-1 flex flex-wrap justify-between gap-x-4 text-[10px] tracking-wide text-white/45 sm:text-[11px]">
+              {pace && <span>{pace}</span>}
+              {hours && (
+                <span className="tabular-nums" title={`Runtime left on your trail, out of ${formatRuntime(totalMinutes)} total`}>
+                  ⏱ {hours}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </header>

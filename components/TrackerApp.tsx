@@ -3,7 +3,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { celebrate, phaseVictory } from "@/lib/confetti";
 import { Profile, profileById } from "@/lib/profiles";
-import { COUNTED_MOVIES, Entry, MOVIES, moviesInOrder, PHASE_BOSSES, PHASE_COLORS, PHASE_LABELS, SHOWS } from "@/lib/timeline";
+import {
+  COUNTED_MOVIES,
+  Entry,
+  MOVIES,
+  moviesInOrder,
+  PHASE_BOSSES,
+  PHASE_COLORS,
+  PHASE_LABELS,
+  runtimeOf,
+  SHOWS,
+} from "@/lib/timeline";
 import { useProgress } from "@/lib/useProgress";
 import Board from "./Board";
 import DetailModal from "./DetailModal";
@@ -30,6 +40,7 @@ export default function TrackerApp() {
   const { watched, toggle } = useProgress(profile?.id ?? null);
   const [orderMode, setOrderModeState] = useState<"release" | "chrono">("release");
   const [showShows, setShowShowsState] = useState(false);
+  const [keySeries, setKeySeriesState] = useState(false);
   const [selected, setSelected] = useState<Entry | null>(null);
 
   // per-device display settings
@@ -38,24 +49,32 @@ export default function TrackerApp() {
       const saved = JSON.parse(localStorage.getItem("mcu-settings") ?? "{}") as {
         orderMode?: "release" | "chrono";
         showShows?: boolean;
+        keySeries?: boolean;
       };
       if (saved.orderMode === "chrono" || saved.orderMode === "release") setOrderModeState(saved.orderMode);
       if (typeof saved.showShows === "boolean") setShowShowsState(saved.showShows);
+      if (typeof saved.keySeries === "boolean") setKeySeriesState(saved.keySeries);
     } catch {
       /* corrupt settings — defaults win */
     }
   }, []);
 
-  const saveSettings = (orderModeVal: "release" | "chrono", showShowsVal: boolean) => {
-    localStorage.setItem("mcu-settings", JSON.stringify({ orderMode: orderModeVal, showShows: showShowsVal }));
+  type Settings = { orderMode: "release" | "chrono"; showShows: boolean; keySeries: boolean };
+  const saveSettings = (patch: Partial<Settings>) => {
+    const next: Settings = { orderMode, showShows, keySeries, ...patch };
+    localStorage.setItem("mcu-settings", JSON.stringify(next));
   };
   const setOrderMode = (mode: "release" | "chrono") => {
     setOrderModeState(mode);
-    saveSettings(mode, showShows);
+    saveSettings({ orderMode: mode });
   };
   const setShowShows = (show: boolean) => {
     setShowShowsState(show);
-    saveSettings(orderMode, show);
+    saveSettings({ showShows: show });
+  };
+  const setKeySeries = (on: boolean) => {
+    setKeySeriesState(on);
+    saveSettings({ keySeries: on });
   };
 
   // phones get a roomier 2-wide snake so wordmarks don't wrap into mush
@@ -69,7 +88,12 @@ export default function TrackerApp() {
   }, []);
   const movieCols = isMobile ? 2 : 3;
 
-  const movieOrder = useMemo(() => moviesInOrder(orderMode), [orderMode]);
+  const movieOrder = useMemo(() => moviesInOrder(orderMode, keySeries), [orderMode, keySeries]);
+
+  // viewing time on the trail (everything before Doomsday, plus key series when slotted in)
+  const trail = movieOrder.filter((e) => e.id !== "doomsday");
+  const totalMinutes = trail.reduce((sum, e) => sum + runtimeOf(e), 0);
+  const minutesLeft = trail.reduce((sum, e) => sum + (watched[e.id] ? 0 : runtimeOf(e)), 0);
 
   const watchedMovies = COUNTED_MOVIES.filter((e) => watched[e.id]).length;
   const watchedShows = SHOWS.filter((e) => watched[e.id]).length;
@@ -120,6 +144,10 @@ export default function TrackerApp() {
         onOrderChange={setOrderMode}
         showShows={showShows}
         onShowShowsChange={setShowShows}
+        keySeries={keySeries}
+        onKeySeriesChange={setKeySeries}
+        minutesLeft={minutesLeft}
+        totalMinutes={totalMinutes}
         profile={profile}
         onSwitchProfile={() => {
           localStorage.removeItem(PROFILE_STORAGE_KEY);
@@ -135,6 +163,7 @@ export default function TrackerApp() {
               <h2 className="f-bebas text-lg tracking-[0.35em] text-white/70">THE MOVIES</h2>
               <span className="text-[11px] uppercase tracking-[0.2em] text-white/35">
                 {orderMode === "release" ? "release order" : "in-universe timeline"}
+                {keySeries ? " · + key series" : ""}
               </span>
             </div>
             <Board
@@ -145,7 +174,7 @@ export default function TrackerApp() {
               showPhases={orderMode === "release"}
               finaleId="doomsday"
               doomGlow={doomGlow}
-              layoutKey={`movies-${orderMode}-${movieCols}`}
+              layoutKey={`movies-${orderMode}-${movieCols}-${keySeries ? "series" : "films"}`}
               wordmarkBase={isMobile ? 1.2 : 1.35}
               onSelect={setSelected}
               onQuickToggle={handleToggle}

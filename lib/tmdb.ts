@@ -23,6 +23,45 @@ export interface TitleInfo {
   genres?: string[];
   releaseDate?: string;
   cast?: { name: string; character: string; profile: string | null }[];
+  /** where to watch in the requested country (TMDB data, powered by JustWatch) */
+  providers?: WatchProviders;
+}
+
+export interface Provider {
+  name: string;
+  logo: string | null;
+}
+
+export interface WatchProviders {
+  region: string;
+  /** TMDB's watch page for the title, which deep-links to each service */
+  link?: string;
+  stream: Provider[];
+  free: Provider[];
+  rent: Provider[];
+  buy: Provider[];
+}
+
+type RawProvider = { provider_name: string; logo_path: string | null; display_priority?: number };
+
+function toProviders(list: RawProvider[] | undefined): Provider[] {
+  return [...(list ?? [])]
+    .sort((a, b) => (a.display_priority ?? 99) - (b.display_priority ?? 99))
+    .map((p) => ({ name: p.provider_name, logo: p.logo_path ? `${IMG}/w92${p.logo_path}` : null }));
+}
+
+function parseProviders(data: Record<string, unknown>, region: string): WatchProviders | undefined {
+  const all = (data["watch/providers"] as { results?: Record<string, Record<string, unknown>> } | undefined)?.results;
+  const r = all?.[region];
+  if (!r) return undefined;
+  return {
+    region,
+    link: (r.link as string) || undefined,
+    stream: toProviders(r.flatrate as RawProvider[]),
+    free: toProviders([...((r.free as RawProvider[]) ?? []), ...((r.ads as RawProvider[]) ?? [])]),
+    rent: toProviders(r.rent as RawProvider[]),
+    buy: toProviders(r.buy as RawProvider[]),
+  };
 }
 
 function apiKey(): string | undefined {
@@ -55,14 +94,14 @@ async function resolveId(entry: Entry): Promise<number | null> {
   return results[0]?.id ?? null;
 }
 
-export async function fetchTitleInfo(entry: Entry): Promise<TitleInfo> {
+export async function fetchTitleInfo(entry: Entry, region = "US"): Promise<TitleInfo> {
   if (!tmdbConfigured()) return { configured: false };
 
   const id = await resolveId(entry);
   if (!id) return { configured: true };
 
   const kind = entry.mediaType === "movie" ? "movie" : "tv";
-  const data = await tmdbFetch(`/${kind}/${id}`, { append_to_response: "credits" });
+  const data = await tmdbFetch(`/${kind}/${id}`, { append_to_response: "credits,watch/providers" });
   if (!data) return { configured: true };
 
   const credits = data.credits as { cast?: { name: string; character: string; profile_path: string | null }[] } | undefined;
@@ -86,5 +125,6 @@ export async function fetchTitleInfo(entry: Entry): Promise<TitleInfo> {
       character: c.character,
       profile: c.profile_path ? `${IMG}/w185${c.profile_path}` : null,
     })),
+    providers: parseProviders(data, region),
   };
 }

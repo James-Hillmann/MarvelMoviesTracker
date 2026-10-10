@@ -6,6 +6,8 @@ A poster-style snake board: click a title for posters, reviews and where to watc
 
 On first visit you pick a profile — **James & Deniz** or **Kate** — and each crew gets its own shared trail (add more in `lib/profiles.ts`). The settings menu under the profile chip switches between release/chronological order and shows/hides the TV column; profile and settings are remembered per device.
 
+The header also counts the viewing time left on your trail (and the hours a week you need to make it), each title's card lists where it's streaming, renting or free in your country (TMDB / JustWatch data), and the **Add key Disney+ series** setting slots Loki, WandaVision, Falcon & Winter Soldier and Ms. Marvel into the movie trail at the right spot, with a note on why each one matters for Doomsday. Those series still don't count toward the movie tally.
+
 ## Run it
 
 ```bash
@@ -40,6 +42,7 @@ Then in the Vercel dashboard:
 ## Where things live
 
 - `lib/timeline.ts` — every movie/show, the watch orders, and each title's wordmark style (font, gradient, aura color). Add or restyle titles here.
+- `lib/timeline.ts` → `RUNTIMES` / `keySeries` — runtimes behind the hours-left total, and which series slot into the trail (and where).
 - `lib/timeline.ts` → `DOOMSDAY_DATE` — the countdown target if the release date moves.
 - `components/Board.tsx` + `ArrowPath.tsx` — the snake grid and the arrow trail.
 - `app/api/progress` — shared watched-state (Redis, falls back to a local file).

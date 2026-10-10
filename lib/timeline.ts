@@ -36,7 +36,18 @@ export interface Entry {
   chrono?: number;
   /** MCU phase (movies only) — used for the divider banners */
   phase?: number;
+  /** Disney+ series that sets up Doomsday — can be slotted into the movie trail */
+  keySeries?: KeySeries;
   wm: WordmarkStyle;
+}
+
+export interface KeySeries {
+  /** one line on why it matters for Doomsday */
+  why: string;
+  /** id of the entry it follows in release order */
+  after: string;
+  /** id of the entry it follows in in-universe order */
+  chronoAfter: string;
 }
 
 /** Avengers: Doomsday theatrical release */
@@ -137,12 +148,12 @@ export const TIMELINE: Entry[] = [
   { id: "punisher", title: "Punisher", year: 2017, type: "netflix", mediaType: "tv", tmdbId: 67178, wm: { font: "blackops", gradient: punisherBone, aura: "#d0d0d0" } },
 
   // Disney+ MCU shows
-  { id: "wandavision", title: "WandaVision", year: 2021, type: "show", mediaType: "tv", tmdbId: 85271, wm: { font: "monoton", gradient: wandaCrimson, aura: "#e83050", scale: 0.7 } },
-  { id: "falcon-winter-soldier", title: "Winter Soldier", sub: "The Falcon and the", year: 2021, type: "show", mediaType: "tv", tmdbId: 88396, wm: { font: "blackops", gradient: "linear-gradient(180deg,#e8f2ff 0%,#c02030 45%,#7d8ba0 100%)", aura: "#8fa8c8", scale: 0.7 } },
-  { id: "loki", title: "Loki", year: 2021, type: "show", mediaType: "tv", tmdbId: 84958, wm: { font: "cinzel", gradient: "linear-gradient(180deg,#d8ffd0 0%,#50c878 40%,#f0c040 75%,#e8b64c 100%)", aura: "#50c878", chaos: true, scale: 1.15 } },
+  { id: "wandavision", title: "WandaVision", year: 2021, type: "show", mediaType: "tv", tmdbId: 85271, keySeries: { why: "Wanda's turn into the Scarlet Witch, which Multiverse of Madness picks straight up.", after: "far-from-home", chronoAfter: "endgame" }, wm: { font: "monoton", gradient: wandaCrimson, aura: "#e83050", scale: 0.7 } },
+  { id: "falcon-winter-soldier", title: "Winter Soldier", sub: "The Falcon and the", year: 2021, type: "show", mediaType: "tv", tmdbId: 88396, keySeries: { why: "Sam Wilson takes up the shield; Brave New World and Doomsday's Cap start here.", after: "wandavision", chronoAfter: "wandavision" }, wm: { font: "blackops", gradient: "linear-gradient(180deg,#e8f2ff 0%,#c02030 45%,#7d8ba0 100%)", aura: "#8fa8c8", scale: 0.7 } },
+  { id: "loki", title: "Loki", year: 2021, type: "show", mediaType: "tv", tmdbId: 84958, keySeries: { why: "The multiverse, the TVA and Kang. The one series on Disney's official watch-before-Doomsday list.", after: "falcon-winter-soldier", chronoAfter: "far-from-home" }, wm: { font: "cinzel", gradient: "linear-gradient(180deg,#d8ffd0 0%,#50c878 40%,#f0c040 75%,#e8b64c 100%)", aura: "#50c878", chaos: true, scale: 1.15 } },
   { id: "hawkeye", title: "Hawkeye", year: 2021, type: "show", mediaType: "tv", tmdbId: 88329, wm: { font: "bebas", gradient: jessicaPurple, aura: "#8a5ad4" } },
   { id: "moon-knight", title: "Moon Knight", year: 2022, type: "show", mediaType: "tv", tmdbId: 92749, wm: { font: "creepster", gradient: moonWhite, aura: "#e8ecf4" } },
-  { id: "ms-marvel", title: "Ms. Marvel", year: 2022, type: "show", mediaType: "tv", tmdbId: 92782, wm: { font: "bangers", gradient: msMarvelPop, aura: "#f0b028" } },
+  { id: "ms-marvel", title: "Ms. Marvel", year: 2022, type: "show", mediaType: "tv", tmdbId: 92782, keySeries: { why: "Kamala's mutant reveal, the MCU's first step toward the X-Men in Doomsday.", after: "multiverse-of-madness", chronoAfter: "guardians-3" }, wm: { font: "bangers", gradient: msMarvelPop, aura: "#f0b028" } },
   { id: "she-hulk", title: "She-Hulk", sub: "Attorney at Law", year: 2022, type: "show", mediaType: "tv", tmdbId: 92783, wm: { font: "bangers", gradient: gammaGreen, aura: "#4ed13c" } },
   { id: "echo", title: "Echo", year: 2024, type: "show", mediaType: "tv", tmdbId: 122226, wm: { font: "anton", gradient: "linear-gradient(180deg,#f0e0d0 0%,#c08858 45%,#5a3018 100%)", aura: "#c08858", scale: 1.15 } },
   { id: "agatha-all-along", title: "Agatha All Along", year: 2024, type: "show", mediaType: "tv", tmdbId: 138501, wm: { font: "cinzel", gradient: agathaViolet, aura: "#b478e8", scale: 0.85 } },
@@ -196,11 +207,82 @@ export const PHASE_COLORS: Record<number, string> = {
   6: "#3dff6e",
 };
 
+/** Doomsday-relevant Disney+ series, in the order they slot into the trail */
+export const KEY_SERIES = SHOWS.filter((e) => e.keySeries);
+
+/**
+ * Runtimes in minutes.  Movies are theatrical cuts; key series are whole-run
+ * totals (approximate, credits included).  Static so totals work without TMDB.
+ */
+export const RUNTIMES: Record<string, number> = {
+  "iron-man": 126,
+  "incredible-hulk": 112,
+  "iron-man-2": 124,
+  thor: 115,
+  "captain-america-1": 124,
+  avengers: 143,
+  "iron-man-3": 130,
+  "thor-dark-world": 112,
+  "captain-america-2": 136,
+  guardians: 121,
+  "age-of-ultron": 141,
+  "ant-man": 117,
+  "civil-war": 147,
+  "doctor-strange": 115,
+  "guardians-2": 136,
+  homecoming: 133,
+  ragnarok: 130,
+  "black-panther": 134,
+  "infinity-war": 149,
+  "ant-man-2": 118,
+  "captain-marvel": 124,
+  endgame: 181,
+  "far-from-home": 129,
+  "black-widow": 134,
+  "shang-chi": 132,
+  eternals: 156,
+  "no-way-home": 148,
+  "multiverse-of-madness": 126,
+  "love-and-thunder": 119,
+  "wakanda-forever": 161,
+  quantumania: 125,
+  "guardians-3": 150,
+  "the-marvels": 105,
+  "deadpool-wolverine": 128,
+  "brave-new-world": 118,
+  thunderbolts: 127,
+  "fantastic-four": 115,
+  "brand-new-day": 150,
+  // key series, full runs
+  wandavision: 350,
+  "falcon-winter-soldier": 320,
+  loki: 610,
+  "ms-marvel": 270,
+};
+
+export function runtimeOf(entry: Entry): number {
+  return RUNTIMES[entry.id] ?? 0;
+}
+
+/** "41h 20m" */
+export function formatRuntime(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m`;
+}
+
 export function entryById(id: string): Entry | undefined {
   return TIMELINE.find((e) => e.id === id);
 }
 
-export function moviesInOrder(mode: "release" | "chrono"): Entry[] {
-  if (mode === "release") return MOVIES;
-  return [...MOVIES].sort((a, b) => (a.chrono ?? 99) - (b.chrono ?? 99));
+export function moviesInOrder(mode: "release" | "chrono", withKeySeries = false): Entry[] {
+  const movies = mode === "release" ? [...MOVIES] : [...MOVIES].sort((a, b) => (a.chrono ?? 99) - (b.chrono ?? 99));
+  if (!withKeySeries) return movies;
+  // slot each series in after its anchor; KEY_SERIES order lets series chain off each other
+  for (const s of KEY_SERIES) {
+    const anchor = mode === "release" ? s.keySeries!.after : s.keySeries!.chronoAfter;
+    const i = movies.findIndex((e) => e.id === anchor);
+    movies.splice(i + 1, 0, s);
+  }
+  return movies;
 }

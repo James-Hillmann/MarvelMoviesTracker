@@ -1079,3 +1079,9 @@ body {
   }
   html { scroll-behavior: auto; }
 }
+
+/* Doomsday-relevant Disney+ series */
+.series-badge {
+  color: color-mix(in srgb, var(--doom-green) 75%, white);
+  border-color: color-mix(in srgb, var(--doom-green) 40%, transparent);
+}
