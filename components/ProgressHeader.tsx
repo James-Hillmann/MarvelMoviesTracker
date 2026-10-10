@@ -15,6 +15,7 @@ interface Props {
   showShows: boolean;
   onShowShowsChange: (show: boolean) => void;
   profile: Profile;
+  onOpenWarRoom: () => void;
   onSwitchProfile: () => void;
 }
 
@@ -28,6 +29,7 @@ export default function ProgressHeader({
   showShows,
   onShowShowsChange,
   profile,
+  onOpenWarRoom,
   onSwitchProfile,
 }: Props) {
   const cd = useCountdown(DOOMSDAY_DATE);
@@ -85,6 +87,11 @@ export default function ProgressHeader({
             ) : null}
           </div>
 
+          <button className="warroom-btn" onClick={onOpenWarRoom} aria-label="Open the War Room: stats, movie nights, crew and badges">
+            <span aria-hidden="true">◈</span>
+            <span className="hidden sm:inline">War Room</span>
+          </button>
+
           {/* profile chip + settings dropdown */}
           <div
             ref={menuRef}
@@ -136,6 +143,11 @@ export default function ProgressHeader({
                 </button>
 
                 <div className="settings-divider" />
+
+                <button className="settings-row" onClick={onOpenWarRoom}>
+                  <span>War Room · stats &amp; badges</span>
+                  <span aria-hidden="true">◈</span>
+                </button>
 
                 <button className="settings-row" onClick={onSwitchProfile}>
                   <span>Switch profile</span>

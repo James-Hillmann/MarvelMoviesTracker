@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Entry } from "@/lib/timeline";
 import { TitleInfo } from "@/lib/tmdb";
 import { watchTogetherUrl } from "@/lib/watchTogether";
+import StarRating from "./StarRating";
 import Wordmark from "./Wordmark";
 
 interface Props {
@@ -12,6 +13,9 @@ interface Props {
   watched: boolean;
   /** current profile — the Watch Together hand-off checks the movie off for it */
   profileId: string;
+  /** this profile's 1–10 rating */
+  rating?: number;
+  onRate: (v: number | null) => void;
   onToggle: (entry: Entry) => void;
   onClose: () => void;
 }
@@ -24,7 +28,7 @@ function searchUrl(entry: Entry) {
   };
 }
 
-export default function DetailModal({ entry, watched, profileId, onToggle, onClose }: Props) {
+export default function DetailModal({ entry, watched, profileId, rating, onRate, onToggle, onClose }: Props) {
   const [info, setInfo] = useState<TitleInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -163,6 +167,12 @@ export default function DetailModal({ entry, watched, profileId, onToggle, onClo
               </div>
             )}
           </div>
+        </div>
+
+        <div className={`rate-row ${watched && !rating ? "nudge" : ""}`}>
+          <span className="rate-label">{rating ? "Your rating" : watched ? "How was it? Rate it" : "Rate it"}</span>
+          <StarRating value={rating} onChange={onRate} size={26} />
+          {rating ? <span className="rate-value">{rating / 2}★</span> : null}
         </div>
 
         <div className="modal-actions">

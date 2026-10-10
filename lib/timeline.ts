@@ -204,3 +204,16 @@ export function moviesInOrder(mode: "release" | "chrono"): Entry[] {
   if (mode === "release") return MOVIES;
   return [...MOVIES].sort((a, b) => (a.chrono ?? 99) - (b.chrono ?? 99));
 }
+
+/** franchise kickers that read first: "Captain America: Civil War" */
+const LEADING_SUBS = new Set(["Captain America", "Black Panther", "Avengers", "Ant-Man & The Wasp"]);
+
+/** Human title for lists + calendars ("Avengers: Endgame", "The Incredible Hulk"). */
+export function displayTitle(e: Entry): string {
+  if (!e.sub) return e.title;
+  if (e.sub === "Thunderbolts*") return "Thunderbolts*";
+  if (e.sub === "of the Galaxy") return e.title.replace("Guardians", "Guardians of the Galaxy");
+  if (e.sub === "The Incredible" || /\b(the|and)$/i.test(e.sub)) return `${e.sub} ${e.title}`;
+  if (LEADING_SUBS.has(e.sub)) return `${e.sub}: ${e.title}`;
+  return `${e.title}: ${e.sub}`;
+}

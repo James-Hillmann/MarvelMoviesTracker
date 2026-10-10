@@ -6,6 +6,17 @@ Every phase is a chapter with its villain looming over a strip of film: click a 
 
 On first visit you pick a profile — **James & Deniz** or **Kate** — and each crew gets its own shared trail (add more in `lib/profiles.ts`). The settings menu under the profile chip switches between release/chronological order and shows/hides the TV column; profile and settings are remembered per device.
 
+## War Room
+
+The **War Room** button in the header (also in the profile menu) opens four tabs:
+
+- **Intel**: movies, hours watched, streaks, bosses down, an on-track/behind verdict and a chart of your pace against what Doomsday needs.
+- **Movie Nights**: pick your nights of the week and movies per night; it schedules every remaining movie, tells you whether you make Dec 18, and exports the plan as an `.ics` calendar file.
+- **Crew**: leaderboard across every profile, crew-favourite movies and your biggest rating disagreements.
+- **Badges**: 27 achievements (phase bosses, trilogies, binges, streaks, ratings); a toast pops when you unlock one.
+
+Every title's detail card has half-star ratings, saved per profile next to progress (`mcu:ratings:<profile>` in Redis, `.data/ratings-<profile>.json` locally). Runtimes for the hour stats live in `lib/runtimes.ts`.
+
 ## Run it
 
 ```bash
