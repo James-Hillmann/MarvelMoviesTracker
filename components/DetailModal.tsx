@@ -1,10 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Entry } from "@/lib/timeline";
+import { sfx } from "@/lib/chiptune";
+import { ICONS, iconFor } from "@/lib/sprites";
+import { Entry, PHASE_BOSSES } from "@/lib/timeline";
 import { TitleInfo } from "@/lib/tmdb";
-import Wordmark from "./Wordmark";
+import PixelImage from "./PixelImage";
+import PixelSprite from "./PixelSprite";
 
 interface Props {
   entry: Entry;
@@ -19,6 +21,42 @@ function searchUrl(entry: Entry) {
     disney: `https://www.disneyplus.com/search?q=${q}`,
     justwatch: `https://www.justwatch.com/us/search?q=${q}`,
   };
+}
+
+/** RPG-style text crawl; click the box to skip to the end */
+function useTypewriter(text: string, speed = 14) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    setN(0);
+    if (!text) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setN(text.length);
+      return;
+    }
+    const t = setInterval(() => {
+      setN((v) => {
+        if (v >= text.length) {
+          clearInterval(t);
+          return v;
+        }
+        return v + 2;
+      });
+    }, speed);
+    return () => clearInterval(t);
+  }, [text, speed]);
+  return { shown: text.slice(0, n), done: n >= text.length, skip: () => setN(text.length) };
+}
+
+function StatBar({ value, color }: { value: number; color: string }) {
+  const blocks = 10;
+  const on = Math.round((value / 100) * blocks);
+  return (
+    <span className="stat-bar" style={{ "--stat-color": color } as React.CSSProperties}>
+      {Array.from({ length: blocks }, (_, i) => (
+        <span key={i} className={i < on ? "on" : ""} />
+      ))}
+    </span>
+  );
 }
 
 export default function DetailModal({ entry, watched, onToggle, onClose }: Props) {
@@ -43,8 +81,18 @@ export default function DetailModal({ entry, watched, onToggle, onClose }: Props
     };
   }, [entry.id]);
 
+  const close = () => {
+    sfx.back();
+    onClose();
+  };
+
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        sfx.back();
+        onClose();
+      }
+    };
     window.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
     return () => {
@@ -55,133 +103,149 @@ export default function DetailModal({ entry, watched, onToggle, onClose }: Props
 
   const links = searchUrl(entry);
   const score = info?.score ? Math.round(info.score * 10) : null;
+  const scoreColor = score === null ? "#888" : score >= 70 ? "#3dff6e" : score >= 50 ? "#ffd84a" : "#ff3048";
+
+  const overview = loading
+    ? "Loading save data…"
+    : info?.overview ??
+      (info && !info.configured
+        ? "Add a free TMDB API key to see posters, synopses and reviews — see the README."
+        : "No intel on this stage yet — it may not be out.");
+  const crawl = useTypewriter(overview);
+  const boss = entry.phase !== undefined ? PHASE_BOSSES[entry.phase] : undefined;
+  const runtime = info?.runtime ? `${Math.floor(info.runtime / 60)}H ${String(info.runtime % 60).padStart(2, "0")}M` : null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={close}>
       <div
-        className="modal-card"
+        className="rpg-window"
         style={{ "--aura": entry.wm.aura } as React.CSSProperties}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={entry.title}
       >
-        {/* backdrop header */}
-        <div className="relative h-44 w-full overflow-hidden rounded-t-[1.25rem] sm:h-56">
-          {info?.backdrop ? (
-            <>
-              <Image src={info.backdrop} alt="" fill className="object-cover" sizes="680px" priority />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a12] via-[#0a0a12]/40 to-transparent" />
-            </>
-          ) : (
-            <div
-              className="absolute inset-0 opacity-40"
-              style={{ backgroundImage: entry.wm.gradient }}
-            />
-          )}
-          <div className="absolute bottom-3 left-5 right-5">
-            {entry.sub && <div className="sub-label mb-1">{entry.sub}</div>}
-            <Wordmark entry={entry} base={2.1} />
+        {/* title bar over a pixelated backdrop */}
+        <div className="rpg-head">
+          {info?.backdrop && <PixelImage className="rpg-backdrop" src={info.backdrop} pixels={120} aspect={16 / 6} levels={6} />}
+          <div className="rpg-head-shade" />
+          <div className="rpg-head-row">
+            <div className="rpg-emblem">
+              <PixelSprite sprite={ICONS[iconFor(entry.id)]} scale={5} aura={entry.wm.aura} />
+            </div>
+            <div className="min-w-0">
+              {entry.sub && <div className="rpg-sub">{entry.sub}</div>}
+              <h2 className="rpg-title">{entry.title}</h2>
+              <div className="rpg-tags">
+                {entry.phase !== undefined && <span>WORLD {entry.phase}</span>}
+                <span>{entry.type === "movie" ? "MAIN QUEST" : entry.type === "netflix" ? "BONUS STAGE" : "SIDE QUEST"}</span>
+                {watched && <span className="rpg-cleared">★ CLEARED</span>}
+              </div>
+            </div>
           </div>
-          <button
-            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white/80 transition hover:bg-black/90 hover:text-white"
-            onClick={onClose}
-            aria-label="Close"
-          >
+          <button className="rpg-close" onClick={close} aria-label="Close">
             ✕
           </button>
         </div>
 
-        <div className="flex gap-5 p-5">
-          {info?.poster && (
-            <div className="relative hidden h-[186px] w-[124px] shrink-0 overflow-hidden rounded-lg border border-white/10 shadow-lg sm:block">
-              <Image src={info.poster} alt={`${entry.title} poster`} fill className="object-cover" sizes="124px" />
-            </div>
-          )}
-
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/60">
-              <span className="text-white/90">{info?.releaseDate?.slice(0, 4) ?? entry.year}</span>
-              {info?.runtime ? <span>{Math.floor(info.runtime / 60)}h {info.runtime % 60}m</span> : null}
-              {info?.seasons ? (
-                <span>
-                  {info.seasons} season{info.seasons > 1 ? "s" : ""} · {info.episodes} eps
-                </span>
-              ) : null}
-              {info?.genres?.slice(0, 3).map((g) => (
-                <span key={g} className="rounded-full border border-white/15 px-2 py-0.5 text-[11px]">
-                  {g}
-                </span>
-              ))}
-              {score !== null && (
-                <span
-                  className="ml-auto rounded-full px-2.5 py-0.5 font-mono text-sm font-bold"
-                  style={{
-                    color: score >= 70 ? "#7dffab" : score >= 50 ? "#ffd82a" : "#ff6b6b",
-                    background: "rgba(255,255,255,0.07)",
-                  }}
-                  title={`${info?.votes?.toLocaleString()} ratings on TMDB`}
-                >
-                  ★ {score}%
-                </span>
-              )}
-            </div>
-
-            {info?.tagline && <p className="mt-2 text-sm italic text-white/40">“{info.tagline}”</p>}
-
-            <p className="mt-2 text-sm leading-relaxed text-white/75">
-              {loading
-                ? "Summoning intel…"
-                : info?.overview ??
-                  (info && !info.configured
-                    ? "Add a free TMDB API key to see posters, synopses and reviews — see the README."
-                    : "No intel available for this one yet — it may not be out.")}
-            </p>
-
-            {info?.cast && info.cast.length > 0 && (
-              <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
-                {info.cast.map((c) => (
-                  <div key={c.name} className="w-14 shrink-0 text-center">
-                    {c.profile ? (
-                      <Image
-                        src={c.profile}
-                        alt={c.name}
-                        width={56}
-                        height={56}
-                        className="h-14 w-14 rounded-full border border-white/10 object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 text-lg">
-                        {c.name[0]}
-                      </div>
-                    )}
-                    <div className="mt-1 truncate text-[10px] text-white/70" title={`${c.name} as ${c.character}`}>
-                      {c.name.split(" ")[0]}
-                    </div>
-                  </div>
-                ))}
+        <div className="rpg-body">
+          <div className="rpg-poster">
+            {info?.poster ? (
+              <PixelImage src={info.poster} pixels={64} aspect={2 / 3} levels={7} alt={`${entry.title} poster`} />
+            ) : (
+              <div className="rpg-poster-empty">
+                <PixelSprite sprite={ICONS[iconFor(entry.id)]} scale={6} aura={entry.wm.aura} />
+                <span>{loading ? "LOADING" : "NO IMAGE"}</span>
               </div>
             )}
           </div>
+
+          <div className="rpg-stats">
+            <dl className="stat-sheet">
+              <div>
+                <dt>YEAR</dt>
+                <dd>{info?.releaseDate?.slice(0, 4) ?? entry.year}</dd>
+              </div>
+              {runtime && (
+                <div>
+                  <dt>TIME</dt>
+                  <dd>{runtime}</dd>
+                </div>
+              )}
+              {info?.seasons ? (
+                <div>
+                  <dt>SEASONS</dt>
+                  <dd>
+                    {info.seasons} · {info.episodes} EPS
+                  </dd>
+                </div>
+              ) : null}
+              <div>
+                <dt>RATING</dt>
+                <dd title={info?.votes ? `${info.votes.toLocaleString()} ratings on TMDB` : undefined}>
+                  {score !== null ? (
+                    <>
+                      <StatBar value={score} color={scoreColor} /> <span style={{ color: scoreColor }}>{score}%</span>
+                    </>
+                  ) : (
+                    <span className="stat-dim">???</span>
+                  )}
+                </dd>
+              </div>
+              {info?.genres && info.genres.length > 0 && (
+                <div>
+                  <dt>CLASS</dt>
+                  <dd>{info.genres.slice(0, 3).join(" / ").toUpperCase()}</dd>
+                </div>
+              )}
+              {boss && (
+                <div>
+                  <dt>BOSS</dt>
+                  <dd>{boss.name.toUpperCase()}</dd>
+                </div>
+              )}
+            </dl>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 border-t border-white/10 px-5 py-4">
-          <a className="btn-disney" href={links.disney} target="_blank" rel="noopener noreferrer">
-            ▶ Watch on Disney+
+        <div className="rpg-dialog" onClick={crawl.skip}>
+          {info?.tagline && <p className="rpg-tagline">“{info.tagline}”</p>}
+          <p className="rpg-text">
+            {crawl.shown}
+            {!crawl.done && <span className="rpg-cursor">▌</span>}
+          </p>
+          {crawl.done && <span className="rpg-more">▼</span>}
+        </div>
+
+        {info?.cast && info.cast.length > 0 && (
+          <div className="rpg-party">
+            <div className="rpg-party-label">PARTY</div>
+            <div className="rpg-party-row">
+              {info.cast.map((c) => (
+                <div key={c.name} className="party-member" title={`${c.name} as ${c.character}`}>
+                  <div className="party-face">
+                    {c.profile ? (
+                      <PixelImage src={c.profile} pixels={18} aspect={1} levels={6} alt={c.name} />
+                    ) : (
+                      <span>{c.name[0]}</span>
+                    )}
+                  </div>
+                  <div className="party-name">{c.name.split(" ")[0]}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="rpg-actions">
+          <a className="px-btn px-btn-blue" href={links.disney} target="_blank" rel="noopener noreferrer" onClick={() => sfx.select()}>
+            ▶ DISNEY+
           </a>
-          <a
-            className="text-xs uppercase tracking-[0.15em] text-white/45 underline-offset-4 hover:text-white/80 hover:underline"
-            href={links.justwatch}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            All streaming options
+          <a className="px-link" href={links.justwatch} target="_blank" rel="noopener noreferrer">
+            ALL STREAMING
           </a>
-          <button
-            className={`btn-watched ml-auto ${watched ? "is-watched" : ""}`}
-            onClick={() => onToggle(entry)}
-          >
-            {watched ? "↺ Unwatch" : "✓ Mark watched"}
+          <button className={`px-btn ml-auto ${watched ? "px-btn-dim" : "px-btn-green"}`} onClick={() => onToggle(entry)}>
+            {watched ? "↺ RESET STAGE" : "✓ CLEAR STAGE"}
           </button>
         </div>
       </div>
