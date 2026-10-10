@@ -73,12 +73,9 @@ export default function TrackerApp() {
     } catch {
       /* corrupt settings — defaults win */
     }
-    // phones, reduced-motion and no-WebGL devices default to the classic board
-    const preferClassic =
-      window.matchMedia("(max-width: 640px)").matches ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // the board is the everyday view; 3D is an opt-in "fly the multiverse" mode
     if (!gl) mode = "classic";
-    setViewModeState(mode ?? (preferClassic ? "classic" : "multiverse"));
+    setViewModeState(mode ?? "classic");
   }, []);
 
   const saveSettings = (orderModeVal: "release" | "chrono", showShowsVal: boolean, viewModeVal: ViewMode | null) => {
@@ -190,6 +187,7 @@ export default function TrackerApp() {
             paused={Boolean(selected) || showsOpen}
             onSelect={setSelected}
             onQuickToggle={handleToggle}
+            onExit={() => setViewMode("classic")}
           />
           {showShows && (
             <>
@@ -227,7 +225,14 @@ export default function TrackerApp() {
           {/* movies — the main quest */}
           <section className={showShows ? "min-w-0 lg:flex-[3]" : "mx-auto w-full max-w-3xl min-w-0"}>
             <div className="mb-4 flex items-baseline justify-between">
-              <h2 className="f-bebas text-lg tracking-[0.35em] text-white/70">THE MOVIES</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="f-bebas text-lg tracking-[0.35em] text-white/70">THE MOVIES</h2>
+                {canWebgl && (
+                  <button className="fly-btn" onClick={() => setViewMode("multiverse")}>
+                    ✦ Fly the multiverse
+                  </button>
+                )}
+              </div>
               <span className="text-[11px] uppercase tracking-[0.2em] text-white/35">
                 {orderMode === "release" ? "release order" : "in-universe timeline"}
               </span>

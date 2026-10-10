@@ -17,6 +17,8 @@ interface Props {
   paused: boolean;
   onSelect: (entry: Entry) => void;
   onQuickToggle: (entry: Entry) => void;
+  /** back to the everyday board */
+  onExit: () => void;
 }
 
 /** viewport-heights of scroll per movie */
@@ -38,6 +40,7 @@ export default function MultiverseView({
   paused,
   onSelect,
   onQuickToggle,
+  onExit,
 }: Props) {
   const nav = useRef<NavState>({ target: 0, focus: 0, map: false, hovered: null, warpAt: -1 });
   const [focusIdx, setFocusIdx] = useState(0);
@@ -229,6 +232,9 @@ export default function MultiverseView({
       <div className="mv-hud">
         {/* top controls */}
         <div className="mv-topbar">
+          <button className="mv-chip" onClick={onExit}>
+            ← Back to board
+          </button>
           <button className={`mv-chip ${map ? "active" : ""}`} onClick={toggleMap} title="Overview (M)">
             {map ? "◉ Exit map" : "◎ Multiverse map"}
           </button>

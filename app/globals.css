@@ -1878,6 +1878,23 @@ body {
 
 .dossier-link.ghost { border-color: rgba(255, 255, 255, 0.15); color: rgba(255, 255, 255, 0.55); background: none; }
 
+/* entry point from the classic board */
+.fly-btn {
+  font-family: var(--font-bebas), sans-serif;
+  letter-spacing: 0.2em;
+  font-size: 0.72rem;
+  padding: 4px 12px 2px;
+  border-radius: 999px;
+  border: 1px solid rgba(61, 255, 110, 0.5);
+  color: #b8ffd0;
+  background: radial-gradient(120% 120% at 50% 0%, rgba(61, 255, 110, 0.18), rgba(10, 10, 20, 0.6));
+  box-shadow: 0 0 14px rgba(61, 255, 110, 0.25);
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.fly-btn:hover { box-shadow: 0 0 22px rgba(61, 255, 110, 0.55); transform: translateY(-1px); }
+
 /* TV side-quest drawer */
 .mv-shows-btn {
   position: fixed;
