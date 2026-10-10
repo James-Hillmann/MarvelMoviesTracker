@@ -6,6 +6,7 @@ import {
   Black_Ops_One,
   Cinzel,
   Creepster,
+  Inter,
   Monoton,
   Orbitron,
   Oswald,
@@ -22,6 +23,7 @@ const cinzel = Cinzel({ weight: "700", subsets: ["latin"], variable: "--font-cin
 const creepster = Creepster({ weight: "400", subsets: ["latin"], variable: "--font-creepster" });
 const orbitron = Orbitron({ weight: "700", subsets: ["latin"], variable: "--font-orbitron" });
 const monoton = Monoton({ weight: "400", subsets: ["latin"], variable: "--font-monoton" });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const oswald = Oswald({ weight: ["300", "500"], subsets: ["latin"], variable: "--font-oswald" });
 
 export const metadata: Metadata = {
@@ -40,6 +42,7 @@ const fontVars = [
   orbitron,
   monoton,
   oswald,
+  inter,
 ]
   .map((f) => f.variable)
   .join(" ");

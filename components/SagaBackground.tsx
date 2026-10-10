@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 
 /**
  * "Saga Eras" background — four fixed gradient layers (gold → red → purple →
- * doom green) cross-faded by scroll progress, plus halftone texture, vignette
+ * doom green) cross-faded by scroll progress, plus film grain, vignette
  * and a sparse ember-particle canvas.  All rAF-throttled and paused when the
  * tab is hidden; static under prefers-reduced-motion.
  */
@@ -77,13 +77,20 @@ export default function SagaBackground() {
 
     let raf = 0;
     let running = true;
-    const frame = () => {
+    let last = 0;
+    const frame = (t: number) => {
       if (!running) return;
+      // embers drift slowly, so ~30fps is plenty and halves the full-screen repaints
+      if (t - last < 32) {
+        raf = requestAnimationFrame(frame);
+        return;
+      }
+      last = t;
       ctx.clearRect(0, 0, W, H);
       for (const p of parts) {
-        p.y -= p.vy;
-        p.x += p.vx;
-        p.tw += 0.02;
+        p.y -= p.vy * 2;
+        p.x += p.vx * 2;
+        p.tw += 0.04;
         if (p.y < -4) {
           p.y = H + 4;
           p.x = Math.random() * W;
@@ -126,7 +133,7 @@ export default function SagaBackground() {
           style={{ backgroundImage: layer.bg, opacity: i === 0 ? 1 : 0 }}
         />
       ))}
-      <div className="halftone" />
+      <div className="grain" />
       <div className="vignette" />
       <canvas
         ref={canvasRef}

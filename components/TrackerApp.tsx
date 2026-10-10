@@ -1,15 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { celebrate, phaseVictory } from "@/lib/confetti";
+import { phaseVictory } from "@/lib/confetti";
+import { checkOffFx, uncheckFx } from "@/lib/effects";
 import { Profile, profileById } from "@/lib/profiles";
 import { COUNTED_MOVIES, Entry, MOVIES, moviesInOrder, PHASE_BOSSES, PHASE_COLORS, PHASE_LABELS, SHOWS } from "@/lib/timeline";
+import { useArtwork } from "@/lib/useArtwork";
 import { useProgress } from "@/lib/useProgress";
-import Board from "./Board";
+import { useRatings } from "@/lib/useRatings";
+import AchievementToast from "./AchievementToast";
+import Chapter from "./Chapter";
 import DetailModal from "./DetailModal";
+import Hero from "./Hero";
+import Premiere from "./Premiere";
 import ProfilePicker from "./ProfilePicker";
 import ProgressHeader from "./ProgressHeader";
 import SagaBackground from "./SagaBackground";
+import WarRoom, { WarRoomTab } from "./WarRoom";
 
 const PROFILE_STORAGE_KEY = "mcu-profile";
 
@@ -27,7 +34,10 @@ export default function TrackerApp() {
   };
 
   const profile = profileById(profileId);
-  const { watched, toggle } = useProgress(profile?.id ?? null);
+  const { watched, loaded, toggle } = useProgress(profile?.id ?? null);
+  const { ratings, loaded: ratingsLoaded, rate } = useRatings(profile?.id ?? null);
+  const [warRoom, setWarRoom] = useState<WarRoomTab | null>(null);
+  const art = useArtwork();
   const [orderMode, setOrderModeState] = useState<"release" | "chrono">("release");
   const [showShows, setShowShowsState] = useState(false);
   const [selected, setSelected] = useState<Entry | null>(null);
@@ -58,7 +68,7 @@ export default function TrackerApp() {
     saveSettings(orderMode, show);
   };
 
-  // phones get a roomier 2-wide snake so wordmarks don't wrap into mush
+  // phones get slightly smaller wordmarks on the title cards
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 640px)");
@@ -67,30 +77,86 @@ export default function TrackerApp() {
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);
-  const movieCols = isMobile ? 2 : 3;
 
   const movieOrder = useMemo(() => moviesInOrder(orderMode), [orderMode]);
+  const finale = MOVIES.find((e) => e.id === "doomsday") as Entry;
+  const road = useMemo(() => movieOrder.filter((e) => e.id !== finale.id), [movieOrder, finale]);
+
+  // release order: one chapter per phase, each with its villain.
+  // timeline order: the same road cut into reels.
+  const chapters = useMemo(() => {
+    if (orderMode === "release") {
+      const phases = [...new Set(road.map((e) => e.phase as number))];
+      return phases.map((p) => {
+        const [title, saga] = PHASE_LABELS[p].split("—").map((x) => x.trim());
+        return {
+          key: `phase-${p}`,
+          number: p,
+          kicker: "Chapter",
+          title,
+          saga,
+          color: PHASE_COLORS[p],
+          boss: PHASE_BOSSES[p],
+          entries: road.filter((e) => e.phase === p),
+        };
+      });
+    }
+    const REEL = 8;
+    const words = ["One", "Two", "Three", "Four", "Five", "Six"];
+    const colors = Object.values(PHASE_COLORS);
+    return Array.from({ length: Math.ceil(road.length / REEL) }, (_, i) => ({
+      key: `reel-${i}`,
+      number: i + 1,
+      kicker: "Timeline",
+      title: `Reel ${words[i] ?? i + 1}`,
+      saga: undefined,
+      color: colors[Math.min(i, colors.length - 1)],
+      boss: undefined,
+      entries: road.slice(i * REEL, (i + 1) * REEL),
+    }));
+  }, [orderMode, road]);
+
+  const showChapters = [
+    { key: "netflix", number: 1, kicker: "Bonus", title: "The Defenders Saga", saga: "Netflix", color: "#c01218", boss: undefined, entries: SHOWS.filter((e) => e.type === "netflix") },
+    { key: "disney", number: 2, kicker: "Bonus", title: "The Series", saga: "Disney+", color: "#3a8ad4", boss: undefined, entries: SHOWS.filter((e) => e.type === "show") },
+  ];
 
   const watchedMovies = COUNTED_MOVIES.filter((e) => watched[e.id]).length;
   const watchedShows = SHOWS.filter((e) => watched[e.id]).length;
-  const doomGlow = COUNTED_MOVIES.length ? watchedMovies / COUNTED_MOVIES.length : 0;
 
   const upNextMovie = movieOrder.find((e) => !watched[e.id])?.id ?? null;
+  const heroEntry = movieOrder.find((e) => e.id === upNextMovie) ?? movieOrder[movieOrder.length - 1];
   const upNextShow = SHOWS.find((e) => !watched[e.id])?.id ?? null;
 
-  const handleToggle = async (entry: Entry) => {
-    const nowWatched = await toggle(entry.id);
-    if (!nowWatched) return;
-    // did this watch clear the whole phase? then it's a boss kill, not a confetti pop
+  const handleToggle = async (entry: Entry, origin?: Element | null) => {
+    // fire effects on the click, not after the network round-trip
+    const willWatch = !watched[entry.id];
+    if (!willWatch) {
+      uncheckFx(entry, origin);
+      await toggle(entry.id);
+      return;
+    }
+    // did this watch clear the whole phase? then it's a boss kill on top of the fireworks
     const phase = entry.phase;
     const boss = phase !== undefined ? PHASE_BOSSES[phase] : undefined;
     const clearedPhase =
       boss && MOVIES.filter((m) => m.phase === phase).every((m) => m.id === entry.id || watched[m.id]);
+    const counted = COUNTED_MOVIES.some((m) => m.id === entry.id);
+    checkOffFx({
+      entry,
+      origin,
+      before: watchedMovies,
+      after: watchedMovies + (counted ? 1 : 0),
+      total: COUNTED_MOVIES.length,
+      bossKill: Boolean(clearedPhase),
+    });
     if (clearedPhase && phase !== undefined) {
-      phaseVictory(PHASE_LABELS[phase].split("—")[0].trim(), boss.name, boss.quip, PHASE_COLORS[phase], boss.img);
-    } else {
-      celebrate(entry.wm.aura);
+      setTimeout(
+        () => phaseVictory(PHASE_LABELS[phase].split("—")[0].trim(), boss.name, boss.quip, PHASE_COLORS[phase], boss.img),
+        700,
+      );
     }
+    await toggle(entry.id);
   };
 
   // wait for localStorage before rendering anything (avoids a picker flash)
@@ -102,7 +168,7 @@ export default function TrackerApp() {
     return (
       <div className="relative min-h-screen">
         <SagaBackground />
-        <ProfilePicker onPick={pickProfile} />
+        <ProfilePicker onPick={pickProfile} art={art} />
       </div>
     );
   }
@@ -121,65 +187,99 @@ export default function TrackerApp() {
         showShows={showShows}
         onShowShowsChange={setShowShows}
         profile={profile}
+        onOpenWarRoom={() => setWarRoom("intel")}
         onSwitchProfile={() => {
           localStorage.removeItem(PROFILE_STORAGE_KEY);
           setProfileId("");
         }}
       />
 
-      <main className="mx-auto max-w-6xl px-4 pb-24 pt-8">
-        <div className="flex flex-col gap-12 lg:flex-row lg:gap-8">
-          {/* movies — the main quest */}
-          <section className={showShows ? "min-w-0 lg:flex-[3]" : "mx-auto w-full max-w-3xl min-w-0"}>
-            <div className="mb-4 flex items-baseline justify-between">
-              <h2 className="f-bebas text-lg tracking-[0.35em] text-white/70">THE MOVIES</h2>
-              <span className="text-[11px] uppercase tracking-[0.2em] text-white/35">
-                {orderMode === "release" ? "release order" : "in-universe timeline"}
-              </span>
-            </div>
-            <Board
-              entries={movieOrder}
-              cols={movieCols}
-              watched={watched}
-              upNextId={upNextMovie}
-              showPhases={orderMode === "release"}
-              finaleId="doomsday"
-              doomGlow={doomGlow}
-              layoutKey={`movies-${orderMode}-${movieCols}`}
-              wordmarkBase={isMobile ? 1.2 : 1.35}
-              onSelect={setSelected}
-              onQuickToggle={handleToggle}
-            />
-          </section>
+      <Hero
+        entry={heroEntry}
+        position={movieOrder.indexOf(heroEntry) + 1}
+        total={COUNTED_MOVIES.length}
+        watchedCount={watchedMovies}
+        allDone={upNextMovie === null || upNextMovie === "doomsday"}
+        reel={road.map((e) => ({ id: e.id, aura: e.wm.aura, on: Boolean(watched[e.id]) }))}
+        art={art}
+        onOpen={setSelected}
+        onToggle={handleToggle}
+      />
 
-          {/* shows — the side quest */}
-          {showShows && (
-          <aside className="min-w-0 lg:flex-[2] lg:border-l lg:border-white/10 lg:pl-8">
-            <div className="mb-4 flex items-baseline justify-between">
-              <h2 className="f-bebas text-lg tracking-[0.35em] text-white/70">SIDE QUEST · TV</h2>
-              <span className="text-[11px] uppercase tracking-[0.2em] text-white/35">
-                {watchedShows}/{SHOWS.length}
-              </span>
-            </div>
-            <p className="mb-5 text-xs leading-relaxed text-white/40">
-              The shows don&apos;t count toward the Doomsday clock — knock them out whenever.
-              The first six are the Netflix era: semi-canon, skippable, but great.
-            </p>
-            <Board
-              entries={SHOWS}
-              cols={2}
-              watched={watched}
-              upNextId={upNextShow}
-              layoutKey="shows"
-              wordmarkBase={isMobile ? 1.0 : 1.15}
-              onSelect={setSelected}
-              onQuickToggle={handleToggle}
-            />
-          </aside>
-          )}
+      {/* data-fx-shake: effects shake this, not the root — a transform there would unpin the fixed background */}
+      <main className="mx-auto max-w-6xl px-4 pb-24 pt-14" data-fx-shake>
+        <div className="section-head">
+          <div>
+            <div className="section-kicker">{orderMode === "release" ? "Six chapters · six villains" : "In-universe order"}</div>
+            <h2 className="section-title">{orderMode === "release" ? "The Saga" : "The Timeline"}</h2>
+          </div>
+          <div className="order-switch" role="group" aria-label="Watch order">
+            <button className={orderMode === "release" ? "active" : ""} onClick={() => setOrderMode("release")}>
+              Release
+            </button>
+            <button className={orderMode === "chrono" ? "active" : ""} onClick={() => setOrderMode("chrono")}>
+              Timeline
+            </button>
+          </div>
         </div>
 
-        <footer className="mt-20 text-center text-[11px] uppercase tracking-[0.3em] text-white/25">
+        <div className="chapters">
+          {chapters.map(({ key, ...c }) => (
+            <Chapter
+              key={`${orderMode}-${key}`}
+              {...c}
+              numberOf={(e) => movieOrder.indexOf(e) + 1}
+              watched={watched}
+              art={art}
+              upNextId={upNextMovie}
+              wordmarkBase={isMobile ? 1.0 : 1.1}
+              onSelect={setSelected}
+              onToggle={handleToggle}
+            />
+          ))}
+        </div>
+
+        <Premiere
+          finale={finale}
+          road={road}
+          watched={watched}
+          art={art}
+          onSelect={setSelected}
+          onToggle={handleToggle}
+        />
+
+        {/* shows — bonus features, never count toward the clock */}
+        {showShows && (
+          <div className="bonus">
+            <div className="section-head">
+              <div>
+                <div className="section-kicker">Side quest · {watchedShows}/{SHOWS.length} seen</div>
+                <h2 className="section-title">Bonus Features</h2>
+              </div>
+            </div>
+            <p className="bonus-note">
+              The shows don&apos;t count toward the Doomsday clock — knock them out whenever. The Netflix era is
+              semi-canon, skippable, but great.
+            </p>
+            <div className="chapters">
+              {showChapters.map(({ key, ...c }) => (
+                <Chapter
+                  key={key}
+                  {...c}
+                  numberOf={(e) => SHOWS.indexOf(e) + 1}
+                  watched={watched}
+                  art={art}
+                  upNextId={upNextShow}
+                  wordmarkBase={isMobile ? 0.95 : 1.05}
+                  onSelect={setSelected}
+                  onToggle={handleToggle}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        <footer className="site-footer">
           {profile.label} vs. the Multiverse · data from TMDB
         </footer>
       </main>
@@ -188,10 +288,36 @@ export default function TrackerApp() {
         <DetailModal
           entry={selected}
           watched={Boolean(watched[selected.id])}
+          profileId={profile.id}
+          rating={ratings[selected.id]}
+          onRate={(v) => rate(selected.id, v)}
           onToggle={handleToggle}
           onClose={() => setSelected(null)}
         />
       )}
+
+      {warRoom && !selected && (
+        <WarRoom
+          profile={profile}
+          watched={watched}
+          ratings={ratings}
+          movieOrder={movieOrder}
+          initialTab={warRoom}
+          onSelect={setSelected}
+          onClose={() => setWarRoom(null)}
+        />
+      )}
+
+      <AchievementToast
+        profileId={profile.id}
+        watched={watched}
+        ratings={ratings}
+        ready={loaded && ratingsLoaded}
+        onOpenBadges={() => {
+          setSelected(null);
+          setWarRoom("badges");
+        }}
+      />
     </div>
   );
 }

@@ -4,12 +4,19 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Entry } from "@/lib/timeline";
 import { TitleInfo } from "@/lib/tmdb";
+import { watchTogetherUrl } from "@/lib/watchTogether";
+import StarRating from "./StarRating";
 import Wordmark from "./Wordmark";
 
 interface Props {
   entry: Entry;
   watched: boolean;
-  onToggle: (entry: Entry) => void;
+  /** current profile — the Watch Together hand-off checks the movie off for it */
+  profileId: string;
+  /** this profile's 1–10 rating */
+  rating?: number;
+  onRate: (v: number | null) => void;
+  onToggle: (entry: Entry, origin?: Element | null) => void;
   onClose: () => void;
 }
 
@@ -21,7 +28,7 @@ function searchUrl(entry: Entry) {
   };
 }
 
-export default function DetailModal({ entry, watched, onToggle, onClose }: Props) {
+export default function DetailModal({ entry, watched, profileId, rating, onRate, onToggle, onClose }: Props) {
   const [info, setInfo] = useState<TitleInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -54,6 +61,8 @@ export default function DetailModal({ entry, watched, onToggle, onClose }: Props
   }, [onClose]);
 
   const links = searchUrl(entry);
+  // movies only: a show party would "finish" after one episode. Doomsday is theaters-only for now.
+  const canWatchTogether = entry.mediaType === "movie" && entry.id !== "doomsday";
   const score = info?.score ? Math.round(info.score * 10) : null;
 
   return (
@@ -67,24 +76,19 @@ export default function DetailModal({ entry, watched, onToggle, onClose }: Props
         aria-label={entry.title}
       >
         {/* backdrop header */}
-        <div className="relative h-44 w-full overflow-hidden rounded-t-[1.25rem] sm:h-56">
+        <div className="modal-hero">
           {info?.backdrop ? (
-            <>
-              <Image src={info.backdrop} alt="" fill className="object-cover" sizes="680px" priority />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a12] via-[#0a0a12]/40 to-transparent" />
-            </>
+            <Image src={info.backdrop} alt="" fill className="modal-hero-img object-cover" sizes="(max-width: 640px) 100vw, 760px" preload />
           ) : (
-            <div
-              className="absolute inset-0 opacity-40"
-              style={{ backgroundImage: entry.wm.gradient }}
-            />
+            <div className="modal-hero-fallback" style={{ backgroundImage: entry.wm.gradient }} />
           )}
-          <div className="absolute bottom-3 left-5 right-5">
+          <div className="modal-hero-shade" />
+          <div className={`absolute bottom-4 left-5 right-14 ${info?.poster ? "sm:left-[172px]" : ""}`}>
             {entry.sub && <div className="sub-label mb-1">{entry.sub}</div>}
             <Wordmark entry={entry} base={2.1} />
           </div>
           <button
-            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white/80 transition hover:bg-black/90 hover:text-white"
+            className="modal-close"
             onClick={onClose}
             aria-label="Close"
           >
@@ -94,8 +98,8 @@ export default function DetailModal({ entry, watched, onToggle, onClose }: Props
 
         <div className="flex gap-5 p-5">
           {info?.poster && (
-            <div className="relative hidden h-[186px] w-[124px] shrink-0 overflow-hidden rounded-lg border border-white/10 shadow-lg sm:block">
-              <Image src={info.poster} alt={`${entry.title} poster`} fill className="object-cover" sizes="124px" />
+            <div className="modal-poster">
+              <Image src={info.poster} alt={`${entry.title} poster`} fill className="object-cover" sizes="132px" />
             </div>
           )}
 
@@ -165,10 +169,25 @@ export default function DetailModal({ entry, watched, onToggle, onClose }: Props
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 border-t border-white/10 px-5 py-4">
-          <a className="btn-disney" href={links.disney} target="_blank" rel="noopener noreferrer">
+        <div className={`rate-row ${watched && !rating ? "nudge" : ""}`}>
+          <span className="rate-label">{rating ? "Your rating" : watched ? "How was it? Rate it" : "Rate it"}</span>
+          <StarRating value={rating} onChange={onRate} size={26} />
+          {rating ? <span className="rate-value">{rating / 2}★</span> : null}
+        </div>
+
+        <div className="modal-actions">
+          <a className="btn-primary" href={links.disney} target="_blank" rel="noopener noreferrer">
             ▶ Watch on Disney+
           </a>
+          {canWatchTogether && (
+            <button
+              className="btn-together"
+              onClick={() => window.open(watchTogetherUrl(entry, profileId, window.location.origin), "_blank", "noopener")}
+              title="Opens Disney+ for the Watch Together extension. Start a party there and this gets checked off for both of you at the credits."
+            >
+              👥 Watch together
+            </button>
+          )}
           <a
             className="text-xs uppercase tracking-[0.15em] text-white/45 underline-offset-4 hover:text-white/80 hover:underline"
             href={links.justwatch}
@@ -178,8 +197,8 @@ export default function DetailModal({ entry, watched, onToggle, onClose }: Props
             All streaming options
           </a>
           <button
-            className={`btn-watched ml-auto ${watched ? "is-watched" : ""}`}
-            onClick={() => onToggle(entry)}
+            className={`btn-ghost ml-auto ${watched ? "is-watched" : ""}`}
+            onClick={(ev) => onToggle(entry, ev.currentTarget)}
           >
             {watched ? "↺ Unwatch" : "✓ Mark watched"}
           </button>
