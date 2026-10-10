@@ -597,7 +597,10 @@ body {
   padding-top: 4.5rem;
 }
 
-.hero.has-art { min-height: min(80vh, 740px); }
+.hero.has-art {
+  /* grow with very wide screens so a 16:9 backdrop isn't cropped to a thin, zoomed band */
+  min-height: max(min(80vh, 740px), min(42vw, 88vh));
+}
 
 .hero-bg {
   position: absolute;
@@ -621,12 +624,13 @@ body {
   object-fit: cover;
   object-position: center 25%;
   animation: ken-burns 38s ease-in-out infinite alternate;
-  filter: saturate(1.1) contrast(1.05);
+  filter: saturate(1.05);
+  will-change: transform;
 }
 
 @keyframes ken-burns {
-  from { transform: scale(1.04) translate3d(0, 0, 0); }
-  to { transform: scale(1.16) translate3d(-2.5%, -1.5%, 0); }
+  from { transform: scale(1.02) translate3d(0, 0, 0); }
+  to { transform: scale(1.07) translate3d(-1.2%, -0.8%, 0); }
 }
 
 .hero-bg-fallback {

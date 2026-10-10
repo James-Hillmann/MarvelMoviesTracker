@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { DOOMSDAY_DATE, Entry, PHASE_COLORS, PHASE_LABELS } from "@/lib/timeline";
 import { TitleInfo } from "@/lib/tmdb";
-import { ArtMap, posterAt } from "@/lib/useArtwork";
+import { ArtMap, backdropSrcSet, posterAt } from "@/lib/useArtwork";
 import { paceLine, useCountdown } from "@/lib/useCountdown";
 import Wordmark from "./Wordmark";
 
@@ -65,7 +65,7 @@ export default function Hero({ entry, position, total, watchedCount, allDone, re
       <div key={entry.id} className="hero-bg">
         {backdrop ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img className="hero-bg-img" src={backdrop} alt="" />
+          <img className="hero-bg-img" src={backdrop} srcSet={backdropSrcSet(backdrop)} sizes="100vw" alt="" decoding="async" fetchPriority="high" />
         ) : (
           <div className="hero-bg-fallback" style={{ backgroundImage: entry.wm.gradient }} />
         )}

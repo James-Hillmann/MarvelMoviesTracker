@@ -1,7 +1,7 @@
 "use client";
 
 import { DOOMSDAY_DATE, Entry } from "@/lib/timeline";
-import { ArtMap, posterAt } from "@/lib/useArtwork";
+import { ArtMap, backdropSrcSet, posterAt } from "@/lib/useArtwork";
 import { useCountdown } from "@/lib/useCountdown";
 import Wordmark from "./Wordmark";
 
@@ -73,7 +73,14 @@ export default function Premiere({ finale, road, watched, art, onSelect, onToggl
         <button className="screen-face" onClick={() => onSelect(finale)} aria-label={`Open ${finale.title}`}>
           {backdrop || poster ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={(backdrop ?? poster) as string} alt="" />
+            <img
+              src={(backdrop ?? poster) as string}
+              srcSet={backdrop ? backdropSrcSet(backdrop) : undefined}
+              sizes="(max-width: 1100px) 100vw, 1100px"
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
           ) : (
             <span className="screen-fallback" style={{ backgroundImage: finale.wm.gradient }} />
           )}

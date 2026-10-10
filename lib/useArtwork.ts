@@ -43,3 +43,14 @@ export function useArtwork(): ArtMap {
 export function posterAt(url: string | null | undefined, size: "w185" | "w342" | "w500" | "w780") {
   return url ? url.replace(/\/w\d+\//, `/${size}/`) : null;
 }
+
+/**
+ * Responsive srcset for a full-bleed TMDB backdrop.  TMDB only serves w300,
+ * w780, w1280 and the original (usually 3840 or 1920 wide), so big and
+ * high-DPI screens get the original instead of an upscaled w1280.
+ */
+export function backdropSrcSet(url: string | null | undefined) {
+  if (!url) return undefined;
+  const at = (size: string) => url.replace(/\/(w\d+|original)\//, `/${size}/`);
+  return `${at("w780")} 780w, ${at("w1280")} 1280w, ${at("original")} 3840w`;
+}
